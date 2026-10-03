@@ -10,27 +10,27 @@
 <header class="toolbar"><button id="back" class="icon-button hidden" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 12H4m0 0 7-7m-7 7 7 7"/></svg></button><div class="title" id="title">配置语言</div><button id="refresh" class="icon-button" aria-label="刷新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.2 9a7 7 0 0 1 12-2L20 12M4 12l2.8 5a7 7 0 0 0 12-2"/></svg></button></header>
 <main id="main" class="content" tabindex="-1">
 <section id="appsPage">
-<label class="search"><span class="sr-only">Search apps</span><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Search app name or package"></label>
-<div class="setting-row compact"><div><div class="row-title">Show system apps</div></div><button id="systemSwitch" class="switch" role="switch" aria-checked="false" aria-label="Show system apps"><i></i></button></div>
-<div id="listStatus" class="statusline">Loading apps…</div><div id="appList" class="app-list" aria-live="polite"></div>
+<label class="search"><span class="sr-only">Search apps</span><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="搜索应用名称或包名"></label>
+<div class="setting-row compact"><div><div class="row-title">显示系统应用</div></div><button id="systemSwitch" class="switch" role="switch" aria-checked="false" aria-label="Show system apps"><i></i></button></div>
+<div id="listStatus" class="statusline">正在加载应用…</div><div id="appList" class="app-list" aria-live="polite"></div>
 </section>
 <section id="detailPage" class="hidden">
 <div id="appHeader" class="app-header"></div>
-<div class="section-title">Current language</div><div class="current-locale" id="currentLocale">Reading…</div><div class="action-row"><button id="restoreDefault" class="secondary">Follow system default</button></div>
-<label class="search"><span class="sr-only">Search languages</span><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="localeSearch" type="search" placeholder="Search language or region"></label>
-<div class="section-title">Common languages</div><div id="commonLocales" class="locale-list"></div>
-<div class="section-title">All available locales</div><div id="localeList" class="locale-list"></div>
+<div class="section-title">当前语言</div><div class="current-locale" id="currentLocale">正在读取…</div><div class="action-row"><button id="restoreDefault" class="secondary">跟随系统默认</button></div>
+<label class="search"><span class="sr-only">Search languages</span><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="localeSearch" type="search" placeholder="搜索语言或地区"></label>
+<div class="section-title">常用语言</div><div id="commonLocales" class="locale-list"></div>
+<div class="section-title">全部可用语言</div><div id="localeList" class="locale-list"></div>
 </section>
 <section id="settingsPage" class="hidden">
-<div class="section-title">Startup</div>
-<div class="setting-row"><div><div class="row-title">Apply saved languages at boot</div><div class="row-desc">One pass after Android starts; disabled by default</div></div><button id="autoSwitch" class="switch" role="switch" aria-checked="false" aria-label="Apply saved languages at boot"><i></i></button></div>
-<div class="section-title">Backup</div>
-<div class="action-row"><button id="exportBtn" class="primary">Export settings</button><span id="configUpdated" class="row-desc"></span></div>
-<textarea id="jsonBox" spellcheck="false" aria-label="Import or export JSON" placeholder="Exported JSON appears here. Paste JSON to import."></textarea>
-<div class="action-row"><button id="previewImport" class="secondary">Review pasted JSON</button><button id="copyJson" class="secondary">Copy text</button></div>
+<div class="section-title">启动</div>
+<div class="setting-row"><div><div class="row-title">开机应用已保存语言</div><div class="row-desc">Android 启动完成后执行一次，默认关闭</div></div><button id="autoSwitch" class="switch" role="switch" aria-checked="false" aria-label="Apply saved languages at boot"><i></i></button></div>
+<div class="section-title">备份与恢复</div>
+<div class="action-row"><button id="exportBtn" class="primary">导出设置</button><span id="configUpdated" class="row-desc"></span></div>
+<textarea id="jsonBox" spellcheck="false" aria-label="Import or export JSON" placeholder="导出的 JSON 会显示在这里，也可以粘贴配置进行导入。"></textarea>
+<div class="action-row"><button id="previewImport" class="secondary">检查并导入</button><button id="copyJson" class="secondary">复制文本</button></div>
 <div id="importSummary" class="summary hidden"></div>
-<details class="settings-details"><summary>外观模式</summary><div class="setting-row"><div><div class="row-title">主题</div><div class="row-desc">跟随系统、浅色或深色</div></div><select id="themeSelect" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div></details>
-<details id="diagnosticsSection" class="settings-details"><summary>诊断信息</summary><div class="section-title">只读状态</div><dl id="diagnostics"></dl><div class="section-title">最近一次操作</div><div id="operationStatus" class="statusbox">暂无操作记录。</div><details><summary>原始状态</summary><pre id="rawStatus"></pre></details></details>
+<details class="settings-details"><summary>外观</summary><div class="setting-row"><div><div class="row-title">主题模式</div><div class="row-desc">跟随系统、浅色或深色</div></div><select id="themeSelect" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div></details>
+<details id="diagnosticsSection" class="settings-details"><summary>诊断信息</summary><div class="section-title">运行状态</div><dl id="diagnostics"></dl><div class="section-title">最近操作</div><div id="operationStatus" class="statusbox">暂无操作记录。</div><details><summary>原始状态</summary><pre id="rawStatus"></pre></details></details>
 </section>
 
 </main>

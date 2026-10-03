@@ -3,6 +3,7 @@
 const PKG=/^[A-Za-z0-9_]+(?:\.[A-Za-z0-9_]+)+$/;
 const LOCALE=/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/;
 function validPackage(v){return typeof v==="string"&&v.length<=255&&PKG.test(v)}
+function validUserId(v){return typeof v==="string"&&/^\d+$/.test(v)}
 function validLocale(v){if(typeof v!=="string"||v.length>63||!LOCALE.test(v)||v.startsWith("-"))return false;try{return typeof Intl==="undefined"||typeof Intl.getCanonicalLocales!=="function"||Intl.getCanonicalLocales(v).length===1}catch(e){return false}}
 function normalizeConfig(v){if(!v||typeof v!=="object"||Array.isArray(v))throw Error("JSON root must be an object");if(v.schemaVersion!==1)throw Error("Unsupported schemaVersion: "+String(v.schemaVersion));if(typeof v.autoApplyOnBoot!=="boolean")throw Error("autoApplyOnBoot must be boolean");if(!Array.isArray(v.apps))throw Error("apps must be an array");const seen=new Set(),apps=[];for(const item of v.apps){if(!item||typeof item!=="object"||!validPackage(item.packageName))throw Error("Invalid package name");if(seen.has(item.packageName))throw Error("Duplicate package: "+item.packageName);seen.add(item.packageName);if(item.followSystem!==true&&(!validLocale(item.localeTag)))throw Error("Invalid Locale tag for "+item.packageName);apps.push({packageName:item.packageName,followSystem:item.followSystem===true,localeTag:item.followSystem===true?null:item.localeTag})}return{schemaVersion:1,autoApplyOnBoot:v.autoApplyOnBoot,apps}}
 function parseJSON(text){let v;try{v=JSON.parse(text)}catch(e){throw Error("Invalid JSON: "+e.message)}return normalizeConfig(v)}
@@ -23,5 +24,5 @@ function packageNamesFromBridge(bridge){
 function packageNamesFromPm(output){return cleanPackages(String(output||"").split(/\r?\n/).map(line=>line.trim().replace(/^package:/,"")))}
 function cleanPackages(values){return [...new Set(values.filter(validPackage))]}
 function mergeConfig(existing,incoming){const old=normalizeConfig(existing),next=normalizeConfig(incoming),map=new Map(old.apps.map(a=>[a.packageName,a]));for(const a of next.apps)map.set(a.packageName,a);return normalizeConfig({schemaVersion:1,autoApplyOnBoot:next.autoApplyOnBoot,apps:[...map.values()]})}
-return{validPackage,validLocale,normalizeConfig,parseJSON,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,mergeConfig}
+return{validPackage,validUserId,validLocale,normalizeConfig,parseJSON,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,mergeConfig}
 });

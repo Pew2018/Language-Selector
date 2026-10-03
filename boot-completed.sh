@@ -43,7 +43,14 @@ while IFS= read -r line; do
     [ "$pkg" != "$entry" ] || continue
     case "$pkg" in ''|*[!A-Za-z0-9_.]*) continue ;; esac
     case "$locale" in
-      @system)\n        if cmd locale set-app-locales "$pkg" --user "$USER_ID" >/dev/null 2>&1; then\n          actual=$(cmd locale get-app-locales "$pkg" --user "$USER_ID" 2>&1)\n          case "$actual" in *"are []"*) SUCCESS=$((SUCCESS + 1));; *) FAILED=$((FAILED + 1)); SUMMARY="default verification failed for $pkg";; esac\n        else\n          FAILED=$((FAILED + 1)); SUMMARY="default reset failed for $pkg"\n        fi\n        continue ;;
+      @system)
+        if cmd locale set-app-locales "$pkg" --user "$USER_ID" >/dev/null 2>&1; then
+          actual=$(cmd locale get-app-locales "$pkg" --user "$USER_ID" 2>&1)
+          case "$actual" in *"are []"*) SUCCESS=$((SUCCESS + 1));; *) FAILED=$((FAILED + 1)); SUMMARY="default verification failed for $pkg";; esac
+        else
+          FAILED=$((FAILED + 1)); SUMMARY="default reset failed for $pkg"
+        fi
+        continue ;;
       ''|*[!A-Za-z0-9-]*) continue ;;
     esac
     case "$locale" in [A-Za-z][A-Za-z]*) ;; *) continue ;; esac

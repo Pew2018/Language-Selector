@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # One-shot late_start hook. No post-fs-data, daemon, system overlay, or SELinux changes.
-DATA_DIR=/data/adb/language_selector_ksu_data
+DATA_DIR=${LS_DATA_DIR:-/data/adb/language_selector_ksu_data}
 CONFIG="$DATA_DIR/config.v1"
 STATUS="$DATA_DIR/boot-status.txt"
 LOCK="$DATA_DIR/boot.lock"
@@ -43,7 +43,7 @@ while IFS= read -r line; do
     [ "$pkg" != "$entry" ] || continue
     case "$pkg" in ''|*[!A-Za-z0-9_.]*) continue ;; esac
     case "$locale" in
-      @system) continue ;; # System default is already represented by an empty locale list.
+      @system)\n        if cmd locale set-app-locales "$pkg" --user "$USER_ID" >/dev/null 2>&1; then\n          actual=$(cmd locale get-app-locales "$pkg" --user "$USER_ID" 2>&1)\n          case "$actual" in *"are []"*) SUCCESS=$((SUCCESS + 1));; *) FAILED=$((FAILED + 1)); SUMMARY="default verification failed for $pkg";; esac\n        else\n          FAILED=$((FAILED + 1)); SUMMARY="default reset failed for $pkg"\n        fi\n        continue ;;
       ''|*[!A-Za-z0-9-]*) continue ;;
     esac
     case "$locale" in [A-Za-z][A-Za-z]*) ;; *) continue ;; esac

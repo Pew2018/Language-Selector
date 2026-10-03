@@ -15,9 +15,9 @@ function packageNamesFromBridge(bridge){
  if(!bridge||typeof bridge!=="object")return null;
  const parse=value=>{if(Array.isArray(value))return value;if(typeof value==="string"){try{const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:null}catch(e){return null}}return null};
  const clean=values=>[...new Set(values.filter(validPackage))];
- try{if(typeof bridge.listPackages==="function"){const names=parse(bridge.listPackages("all"));if(names)return clean(names)}}catch(e){}
- try{if(typeof bridge.listAllPackages==="function"){const names=parse(bridge.listAllPackages());if(names)return clean(names)}}catch(e){}
- try{if(typeof bridge.listUserPackages==="function"&&typeof bridge.listSystemPackages==="function"){const users=parse(bridge.listUserPackages()),systems=parse(bridge.listSystemPackages());if(users&&systems)return clean([...users,...systems])}}catch(e){}
+ try{if(typeof bridge.listPackages==="function"){const names=parse(bridge.listPackages("all"));if(names){const filtered=clean(names);if(filtered.length)return filtered}}}catch(e){}
+ try{if(typeof bridge.listAllPackages==="function"){const names=parse(bridge.listAllPackages());if(names){const filtered=clean(names);if(filtered.length)return filtered}}}catch(e){}
+ try{if(typeof bridge.listUserPackages==="function"&&typeof bridge.listSystemPackages==="function"){const users=parse(bridge.listUserPackages()),systems=parse(bridge.listSystemPackages());if(users&&systems){const filtered=clean([...users,...systems]);if(filtered.length)return filtered}}}catch(e){}
  return null
 }
 function packageNamesFromPm(output){return cleanPackages(String(output||"").split(/\r?\n/).map(line=>line.trim().replace(/^package:/,"")))}

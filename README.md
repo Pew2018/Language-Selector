@@ -4,7 +4,7 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 
 ## Scope
 
-- Installed package names, labels, system-app status, and icons from KSU Next WebUI-Next package APIs.
+- Installed packages through the Manager package API or an Android Package Manager shell fallback; labels and icons use Manager metadata APIs when available.
 - Search/filter, optional system-app display, actual locale reads, explicit locale set and restore-to-system-default.
 - Persistent per-package configuration, schemaVersion 1 JSON import/export by copy/paste, and explicit replace/merge choices.
 - Optional one-pass boot application after bounded service readiness checks.
@@ -14,7 +14,7 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 ## Install and use
 
 1. Download the Actions artifact ZIP and install it directly in KernelSU Next Manager. Its archive root contains `module.prop`; no inner module ZIP needs extracting.
-2. Open the module WebUI. The Manager must expose KernelSU Next WebUI-Next APIs: package list/info/icon and asynchronous root-shell APIs. Upstream documents these functions but does not publish an API-to-Manager-version mapping, so the required API set is stated rather than inventing a version number.
+2. Open the module WebUI. The Manager must expose the asynchronous Root shell API. Package list, app info, and icon APIs are used when available; if package enumeration methods are missing, the module falls back to Android's package-manager shell command. Upstream documents these functions but does not publish an API-to-Manager-version mapping, so the required API set is stated rather than inventing a version number.
 3. Choose an app and set a language, or explicitly choose “Follow system default”. Confirm that operation results are verified by reading the actual locale again.
 4. Settings can export/import JSON in the WebView clipboard text area; import always shows a summary and asks for Replace or Merge before writing.
 

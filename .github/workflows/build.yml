@@ -29,7 +29,7 @@ jobs:
       - name: Package KernelSU module
         run: |
           mkdir -p dist
-          zip -qr dist/language-selector-ksu-next.zip module.prop customize.sh service.sh boot-completed.sh uninstall.sh webroot docs
+          zip -qr dist/language-selector-ksu-next.zip module.prop customize.sh boot-completed.sh uninstall.sh webroot docs
           unzip -l dist/language-selector-ksu-next.zip
       - uses: actions/upload-artifact@v4
         with:

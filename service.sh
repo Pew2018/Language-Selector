@@ -1,4 +1,3 @@
 #!/system/bin/sh
-# KernelSU Next late_start service hook. Runs one bounded boot application pass.
-MODDIR=${0%/*}
-exec "$MODDIR/boot-completed.sh"
+# Intentionally empty: KernelSU Next invokes boot-completed.sh at the correct lifecycle stage.
+exit 0

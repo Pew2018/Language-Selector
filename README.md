@@ -22,7 +22,7 @@ The language list and interface are local. App labels/icons and root shell comma
 
 ## Startup behavior
 
-KernelSU's late_start `service.sh` delegates to `boot-completed.sh`. The script exits without action if auto-apply is off, rejects invalid configuration, waits up to 60 seconds for boot completion and `cmd locale`, then applies configured non-default locales one by one for the current Android user. Each failure is isolated; the script records a compact status and exits. No resident process or periodic polling is used. It does not reset per-app locales on install, update, or uninstall.
+KernelSU Next invokes `boot-completed.sh` after boot completion. The script exits without action if auto-apply is off, rejects invalid configuration, waits up to 60 seconds for `cmd locale`, then applies configured locales one by one for the current Android user. `service.sh` is an inert compatibility stub and is excluded from the install ZIP. Each failure is isolated; the script records a compact status and exits. No resident process or periodic polling is used. It does not reset per-app locales on install, update, or uninstall.
 
 ## Build and tests
 

@@ -28,4 +28,4 @@ KernelSU Next invokes `boot-completed.sh` after boot completion. The script exit
 
 GitHub Actions runs Node's built-in tests, `sh -n` syntax checks, assembles a root-level KernelSU module ZIP, and uploads it as an Actions artifact. No local build is required.
 
-See [docs/configuration.md](docs/configuration.md) for state format, APIs, AOSP command semantics, and the bundled language catalog.
+See [docs/configuration.md](docs/configuration.md) for state format, APIs, AOSP command semantics, and the local device locale catalog with offline fallback.

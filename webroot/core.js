@@ -11,6 +11,17 @@ function parseInternal(text){if(typeof text!=="string"||!text.startsWith("schema
 function shellQuote(s){return "'"+String(s).replace(/'/g,"'\"'\"'")+"'"} 
 function parseLocaleOutput(stdout){const m=String(stdout).match(/are\s+\[([^\]]*)\]/i);if(!m)return{ok:false,reason:/Unknown package/i.test(stdout)?"package-unavailable":"read-failed",raw:String(stdout)};const tags=m[1].trim();return tags?{ok:true,followSystem:false,localeTag:tags.split(",")[0].trim(),raw:String(stdout)}:{ok:true,followSystem:true,localeTag:null,raw:String(stdout)}}
 function parseDeviceLocales(output){const seen=new Set(),result=[];for(const line of String(output||"").split(/\r?\n/)){const tag=line.trim();if(!validLocale(tag))continue;let canonical=tag;try{if(typeof Intl!=="undefined"&&typeof Intl.getCanonicalLocales==="function")canonical=Intl.getCanonicalLocales(tag)[0]}catch(e){continue}if(!seen.has(canonical)){seen.add(canonical);result.push(canonical)}}return result}
+function packageNamesFromBridge(bridge){
+ if(!bridge||typeof bridge!=="object")return null;
+ const parse=value=>{if(Array.isArray(value))return value;if(typeof value==="string"){try{const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:null}catch(e){return null}}return null};
+ const clean=values=>[...new Set(values.filter(validPackage))];
+ try{if(typeof bridge.listPackages==="function"){const names=parse(bridge.listPackages("all"));if(names)return clean(names)}}catch(e){}
+ try{if(typeof bridge.listAllPackages==="function"){const names=parse(bridge.listAllPackages());if(names)return clean(names)}}catch(e){}
+ try{if(typeof bridge.listUserPackages==="function"&&typeof bridge.listSystemPackages==="function"){const users=parse(bridge.listUserPackages()),systems=parse(bridge.listSystemPackages());if(users&&systems)return clean([...users,...systems])}}catch(e){}
+ return null
+}
+function packageNamesFromPm(output){return cleanPackages(String(output||"").split(/\r?\n/).map(line=>line.trim().replace(/^package:/,"")))}
+function cleanPackages(values){return [...new Set(values.filter(validPackage))]}
 function mergeConfig(existing,incoming){const old=normalizeConfig(existing),next=normalizeConfig(incoming),map=new Map(old.apps.map(a=>[a.packageName,a]));for(const a of next.apps)map.set(a.packageName,a);return normalizeConfig({schemaVersion:1,autoApplyOnBoot:next.autoApplyOnBoot,apps:[...map.values()]})}
-return{validPackage,validLocale,normalizeConfig,parseJSON,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,mergeConfig}
+return{validPackage,validLocale,normalizeConfig,parseJSON,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,mergeConfig}
 });

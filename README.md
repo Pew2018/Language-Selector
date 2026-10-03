@@ -13,7 +13,7 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 
 ## Install and use
 
-1. Install the Actions artifact ZIP from KernelSU Next Manager.
+1. Download the Actions artifact ZIP and install it directly in KernelSU Next Manager. Its archive root contains `module.prop`; no inner module ZIP needs extracting.
 2. Open the module WebUI. The Manager must expose KernelSU Next WebUI-Next APIs: package list/info/icon and asynchronous root-shell APIs. Upstream documents these functions but does not publish an API-to-Manager-version mapping, so the required API set is stated rather than inventing a version number.
 3. Choose an app and set a language, or explicitly choose “Follow system default”. Confirm that operation results are verified by reading the actual locale again.
 4. Settings can export/import JSON in the WebView clipboard text area; import always shows a summary and asks for Replace or Merge before writing.

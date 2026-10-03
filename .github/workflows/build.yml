@@ -28,11 +28,13 @@ jobs:
           test -f webroot/index.html
       - name: Package KernelSU module
         run: |
-          mkdir -p dist
-          zip -qr dist/language-selector-ksu-next.zip module.prop customize.sh boot-completed.sh uninstall.sh webroot docs
-          unzip -l dist/language-selector-ksu-next.zip
+          mkdir -p dist/module
+          cp -R module.prop customize.sh boot-completed.sh uninstall.sh webroot docs dist/module/
+          (cd dist/module && zip -qr ../module-check.zip .)
+          unzip -t dist/module-check.zip
+          unzip -l dist/module-check.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: language-selector-ksu-next
-          path: dist/language-selector-ksu-next.zip
+          name: language-selector-ksu-next-module
+          path: dist/module/
           if-no-files-found: error

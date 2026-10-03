@@ -20,7 +20,7 @@ app=com.example.chat|@system
 
 ## WebUI requirements
 
-The WebUI uses KernelSU Next WebUI-Next global `ksu` APIs documented in the KernelSU-Next repository: `listAllPackages`, `getPackagesInfo`, `getPackagesIcons`, and asynchronous `exec(command, callbackName)`. Minimum requirement: a KernelSU Next Manager exposing these APIs (including icon API); no older Manager version number is documented by upstream, so a numeric minimum cannot be responsibly claimed. If APIs are absent the UI reports that requirement and does not silently substitute a different manager bridge.
+The WebUI uses the KernelSU Next WebUI bridge documented by the upstream project. Package enumeration accepts `listPackages("all")`, the `listAllPackages()` variant, or separate system/user package methods. Package labels use `getPackagesInfo` when exposed; icons use `getPackagesIcons` when available and otherwise the Manager's `ksu://icon/<package>` URI. If package enumeration methods are absent but asynchronous Root `exec` is available, the UI falls back to Android's `cmd package list packages` for the foreground user. In this fallback, app names use package IDs if metadata lookup is absent. A KernelSU Next Manager exposing the asynchronous Root `exec(command, callbackName)` bridge is the minimum requirement; the upstream API documentation does not map these methods to a numeric Manager release.
 
 Language calls use Android 13+ `cmd locale get-app-locales` and `set-app-locales`, current foreground Android user, and shell-quoted validated arguments. To restore system default, `--locales` is omitted: AOSP documents an unspecified locale list as empty. Per-app language commands and API syntax were checked against AOSP Android 13 LocaleManagerShellCommand.
 

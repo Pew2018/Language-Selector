@@ -7,7 +7,7 @@
 <script defer src="core.js"></script><script defer src="app.js"></script>
 </head>
 <body>
-<header class="toolbar"><button id="back" class="icon-button hidden" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 12H4m0 0 7-7m-7 7 7 7"/></svg></button><div class="title" id="title">Language Selector</div><button id="refresh" class="icon-button" aria-label="Refresh"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.2 9a7 7 0 0 1 12-2L20 12M4 12l2.8 5a7 7 0 0 0 12-2"/></svg></button></header>
+<header class="toolbar"><button id="back" class="icon-button hidden" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M20 12H4m0 0 7-7m-7 7 7 7"/></svg></button><div class="title" id="title">Language Selector</div><button id="refresh" class="icon-button" aria-label="刷新"><svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M5.2 9a7 7 0 0 1 12-2L20 12M4 12l2.8 5a7 7 0 0 0 12-2"/></svg></button></header>
 <main id="main" class="content" tabindex="-1">
 <section id="appsPage">
 <label class="search"><span class="sr-only">Search apps</span><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 5 5"/></svg><input id="search" type="search" placeholder="Search app name or package"></label>
@@ -29,17 +29,11 @@
 <textarea id="jsonBox" spellcheck="false" aria-label="Import or export JSON" placeholder="Exported JSON appears here. Paste JSON to import."></textarea>
 <div class="action-row"><button id="previewImport" class="secondary">Review pasted JSON</button><button id="copyJson" class="secondary">Copy text</button></div>
 <div id="importSummary" class="summary hidden"></div>
-<div class="section-title">Appearance</div>
-<div class="setting-row"><div><div class="row-title">Theme</div><div class="row-desc">Light, dark, or follow system</div></div><select id="themeSelect" aria-label="Theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select></div>
-<div class="setting-row"><div><div class="row-title">Accent color</div><div class="row-desc">Text contrast is calculated from the selected color</div></div><input id="accentColor" type="color" value="#42a5f5"></div>
-<div id="presets" class="presets"></div>
+<details class="settings-details"><summary>外观模式</summary><div class="setting-row"><div><div class="row-title">主题</div><div class="row-desc">跟随系统、浅色或深色</div></div><select id="themeSelect" aria-label="主题"><option value="system">跟随系统</option><option value="light">浅色</option><option value="dark">深色</option></select></div></details>
+<details id="diagnosticsSection" class="settings-details"><summary>诊断信息</summary><div class="section-title">只读状态</div><dl id="diagnostics"></dl><div class="section-title">最近一次操作</div><div id="operationStatus" class="statusbox">暂无操作记录。</div><details><summary>原始状态</summary><pre id="rawStatus"></pre></details></details>
 </section>
-<section id="diagnosticsPage" class="hidden">
-<div class="section-title">Read-only status</div><dl id="diagnostics"></dl>
-<div class="section-title">Recent operation</div><div id="operationStatus" class="statusbox">No recent operation.</div>
-<details><summary>Raw status</summary><pre id="rawStatus"></pre></details>
-</section>
+
 </main>
-<nav class="bottom-nav" aria-label="Main sections"><button data-page="apps" class="nav-button active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h4"/></svg><span>Apps</span></button><button data-page="settings" class="nav-button"><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 13l-2-1 2-3 2 1 2-2-1-2 4-1 1 2h2l1-2 4 2-1 2 2 2 2-1 1 4-2 1v2l2 1-2 4-2-1-2 2 1 2-4 1-1-2h-2l-1 2-4-2 1-2-2-2-2 1-1-4 2-1z"/></svg><span>Settings</span></button><button data-page="diagnostics" class="nav-button"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10h.01"/></svg><span>Diagnostics</span></button></nav>
+<nav class="bottom-nav" aria-label="主导航"><button data-page="apps" class="nav-button active"><svg viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 9h8M8 13h8M8 17h4"/></svg><span>配置语言</span></button><button data-page="settings" class="nav-button"><svg viewBox="0 0 24 24"><path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8ZM4 13l-2-1 2-3 2 1 2-2-1-2 4-1 1 2h2l1-2 4 2-1 2 2 2 2-1 1 4-2 1v2l2 1-2 4-2-1-2 2 1 2-4 1-1-2h-2l-1 2-4-2 1-2-2-2-2 1-1-4 2-1z"/></svg><span>设置</span></button></nav>
 <div id="dialogHost"></div><div id="toast" role="status" aria-live="polite"></div>
 </body></html>

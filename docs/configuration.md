@@ -26,4 +26,4 @@ Language calls use Android 13+ `cmd locale get-app-locales` and `set-app-locales
 
 ## Offline language catalog
 
-The picker includes a bundled curated set of commonly used BCP-47 language and region tags; it is fully offline, de-duplicates tags, and filters syntactically invalid entries. Labels are generated locally with the browser's built-in `Intl.DisplayNames` when available, with the tag as fallback. This catalog is a practical curated directory, not a promise that every listed locale is supported by every app. Android/app language support varies by package.
+The picker first calls Android's local `cmd locale list-device-locales` command and uses its one-tag-per-line BCP-47 output, de-duplicated and validated, when available. On Android 13+ builds that do not expose this command or return a usable list, it falls back to a bundled curated set of commonly used language and region tags. No network request is made. Labels are generated locally with the browser's built-in `Intl.DisplayNames` when available, with the tag as fallback. Device-supported locales do not guarantee support by every app; Android/app language support varies by package.

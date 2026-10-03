@@ -1,0 +1,38 @@
+name: KernelSU Next module
+on:
+  push:
+    branches: [feature/ksu-next-foundation]
+  pull_request:
+    branches: [feature/ksu-next-foundation]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Validate JavaScript and configuration logic
+        run: |
+          node --check webroot/core.js
+          node --check webroot/app.js
+          node --test tests/*.test.js
+      - name: Validate shell scripts and module metadata
+        run: |
+          for f in customize.sh service.sh boot-completed.sh; do sh -n "$f"; done
+          test -f module.prop
+          grep -q '^id=language_selector_ksu$' module.prop
+          test -f webroot/index.html
+      - name: Package KernelSU module
+        run: |
+          mkdir -p dist
+          zip -qr dist/language-selector-ksu-next.zip module.prop customize.sh service.sh boot-completed.sh uninstall.sh webroot docs
+          unzip -l dist/language-selector-ksu-next.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: language-selector-ksu-next
+          path: dist/language-selector-ksu-next.zip
+          if-no-files-found: error

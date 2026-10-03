@@ -1,56 +1,31 @@
-### Language Selector
+# Language Selector — KernelSU Next foundation
 
-Language Selector allows users to set individual app languages. It tries to replicates the behavior of the "App languages" feature introduced in Android 13.
+An independent KernelSU Next module port for Android 13+ per-app languages. The original Shizuku/Compose app is not bundled or modified. TurboIMS is not a dependency and is not modified.
 
-To use this app:
-- MUST be on Android 13 or higher, there is no compatiblity with older Android versions.
-- MUST have Shizuku.
+## Scope
 
-You can get this app at Releases section.
+- Installed package names, labels, system-app status, and icons from KSU Next WebUI-Next package APIs.
+- Search/filter, optional system-app display, actual locale reads, explicit locale set and restore-to-system-default.
+- Persistent per-package configuration, schemaVersion 1 JSON import/export by copy/paste, and explicit replace/merge choices.
+- Optional one-pass boot application after bounded service readiness checks.
+- Light/dark/system theme and classic Android system utility layout.
+- No tile, no external requests, no system partition writes, overlays, sepolicy rules, or SELinux changes.
 
-<div>
-<img src="https://raw.githubusercontent.com/VegaBobo/Language-Selector/main/other/preview_1.jpg" alt="preview" width="200"/>
-<img src="https://raw.githubusercontent.com/VegaBobo/Language-Selector/main/other/preview_2.jpg" alt="preview" width="200"/>
-</div>
+## Install and use
 
-### Features
+1. Install the Actions artifact ZIP from KernelSU Next Manager.
+2. Open the module WebUI. The Manager must expose KernelSU Next WebUI-Next APIs: package list/info/icon and asynchronous root-shell APIs. Upstream documents these functions but does not publish an API-to-Manager-version mapping, so the required API set is stated rather than inventing a version number.
+3. Choose an app and set a language, or explicitly choose “Follow system default”. Confirm that operation results are verified by reading the actual locale again.
+4. Settings can export/import JSON in the WebView clipboard text area; import always shows a summary and asks for Replace or Merge before writing.
 
-- Set individual app languages
-- Allows selecting language from any app **
-- Quick change languages with QSTile
+The language list and interface are local. App labels/icons and root shell commands are provided by the installed KernelSU Next Manager, not a network service.
 
-** Language Selector DOES NOT translate apps, it just specify a locale that will be used by application, if the desired language is supported by the app, it should be displayed as expected.
+## Startup behavior
 
-** Please note that changing locale for unsupported applications and system apps may cause unexpected behavior and is NOT RECOMMENDED.
+KernelSU's late_start `service.sh` delegates to `boot-completed.sh`. The script exits without action if auto-apply is off, rejects invalid configuration, waits up to 60 seconds for boot completion and `cmd locale`, then applies configured non-default locales one by one for the current Android user. Each failure is isolated; the script records a compact status and exits. No resident process or periodic polling is used. It does not reset per-app locales on install, update, or uninstall.
 
-#### Language availability
+## Build and tests
 
-This app parses Locale (java.util.Locale) from Locale.getAvailableLocales(), consequently, numerous locales are present in the app, the language list is huge, if someone want to improve that, feel free to send a PR, because this way is pretty slow and languages aren't filtered accurately.
+GitHub Actions runs Node's built-in tests, `sh -n` syntax checks, assembles a root-level KernelSU module ZIP, and uploads it as an Actions artifact. No local build is required.
 
-###  Usage
-
-Before using this app, you MUST install and start Shizuku, the way this app works makes Shizuku MANDATORY, after that, you should follow this steps:
-
-1. Install "Language Selector" (check Releases)
-2. Open, grant Shizuku permissions and tap on "Proceed"
-3. Choose a app you want to select it's language.
-4. Select any language from list
-5. That is it?
-
-#### Pinning languages
-
-You can pin languages by long-pressing on desired language, pinned languages will appear at the top of the list and will also be available in the QS tile.
-
-#### Quick tile
-
-You can quick change current running app language by adding a QS tile, available tile languages are the pinned ones, if no pinned language is set, then tile will be marked as Unavailable, changing system apps language from QS is also not supported.
-
-### Background
-
-I've made this app because MIUI doesn't seem to have app languages in Android 13 (at least on my device, running global MIUI 14/Android 13), by not having the feature, i mean, there is no option inside Settings app to change app languages individually, but since it is as Android 13 build,  there is a high change that locale service is still present, if so, we can use LocaleManager to do per-app basis locale operations.
-
-Locale manager can be acessible via ADB, using "cmd locale" command, since adb has the ability to change other app languages, i've decided to make my own "front-end" for managing application locales, so i can set languages and use this feature, even if there is no UI for app languages in stock Settings app yet.
-
-Since ADB is required to manage other application languages, this app uses Shizuku to interact with LocaleManager APIs at privileged level, that's why Shizuku is mandatory to use this app.
-
-If your device is running Android 13 or higher, and your ROM doesn't include any option related to the app languages, this app may be useful.
+See [docs/configuration.md](docs/configuration.md) for state format, APIs, AOSP command semantics, and the bundled language catalog.

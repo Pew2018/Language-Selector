@@ -29,8 +29,13 @@ if [ "$SDK" -lt 33 ]; then SUMMARY="Android 13+ required"; FINISHED=$(now); writ
 READY=0
 i=0
 while [ "$i" -lt 30 ]; do
-  if [ "$(getprop sys.boot_completed)" = "1" ] && command -v cmd >/dev/null 2>&1 &&
-      cmd locale help >/dev/null 2>&1; then READY=1; break; fi
+  if [ "$(getprop sys.boot_completed)" = "1" ] && command -v cmd >/dev/null 2>&1; then
+    # Some Android 16 builds print valid help but return 255; detect commands in output.
+    HELP=$(cmd locale help 2>&1)
+    case "$HELP" in
+      *get-app-locales*set-app-locales*) READY=1; break ;;
+    esac
+  fi
   i=$((i + 1)); sleep 2
 done
 if [ "$READY" -ne 1 ]; then SUMMARY="Locale service not ready after bounded wait"; FINISHED=$(now); write_status; exit 0; fi

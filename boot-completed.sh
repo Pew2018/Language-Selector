@@ -31,7 +31,7 @@ while IFS= read -r line || [ -n "$line" ]; do
   case "$line" in app=*)
     [ "$(date +%s)" -lt "$deadline" ] || { SUMMARY="Boot apply deadline reached"; break; }
     assert_user
-    entry=${line#app=}; pkg=${entry%%|*}; tag=${entry#*|}
+    entry=${line#app=}; pkg=${entry%%'|'*}; tag=${entry#*'|'}
     mark_pending "$pkg" "$tag"
     if [ "$tag" = @system ]; then bounded cmd locale set-app-locales "$pkg" --user "$USER_ID" >/dev/null 2>&1; result=$?
     else bounded cmd locale set-app-locales "$pkg" --user "$USER_ID" --locales "$tag" >/dev/null 2>&1; result=$?; fi

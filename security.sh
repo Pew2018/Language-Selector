@@ -76,7 +76,7 @@ validate_config() {
       schema=1) schemas=$((schemas + 1));;
       auto=0|auto=1) autos=$((autos + 1)); AUTO=${v_line#auto=};;
       app=*)
-        v_entry=${v_line#app=}; v_pkg=${v_entry%%|*}; v_tag=${v_entry#*|}
+        v_entry=${v_line#app=}; v_pkg=${v_entry%%'|'*}; v_tag=${v_entry#*'|'}
         [ "$v_entry" != "$v_tag" ] && valid_package "$v_pkg" || fail "Invalid package entry"
         [ "$v_tag" = @system ] || valid_locale "$v_tag" || fail "Invalid locale entry"
         grep -F -x -q "$v_pkg" "$WORK/seen" && fail "Duplicate package"
@@ -103,7 +103,7 @@ save_snapshot() {
 replace_entry() {
   printf 'schema=1\nauto=%s\n' "$AUTO" > "$WORK/next"
   while IFS= read -r line || [ -n "$line" ]; do
-    case "$line" in app=*) entry=${line#app=}; [ "${entry%%|*}" = "$1" ] || printf '%s\n' "$line" >> "$WORK/next";; esac
+    case "$line" in app=*) entry=${line#app=}; [ "${entry%%'|'*}" = "$1" ] || printf '%s\n' "$line" >> "$WORK/next";; esac
   done < "$SNAP"
   printf 'app=%s|%s\n' "$1" "$2" >> "$WORK/next"
   mv "$WORK/next" "$SNAP"

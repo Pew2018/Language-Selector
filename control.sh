@@ -29,7 +29,7 @@ case "$action" in
   recover)
     assert_platform; safe_file "$PENDING"; validate_config "$PENDING"
     [ "$count" = 1 ] || fail "Invalid operation journal"
-    entry=$(grep '^app=' "$PENDING"); entry=${entry#app=}; pkg=${entry%%|*}; valid_package "$pkg" || fail "Invalid operation journal"
+    entry=$(grep '^app=' "$PENDING"); entry=${entry#app=}; pkg=${entry%%'|'*}; valid_package "$pkg" || fail "Invalid operation journal"
     read_actual "$pkg" || fail "Cannot reconcile actual language"
     tag=$ACTUAL; load_snapshot; replace_entry "$pkg" "$tag"; save_snapshot
     rm -f "$PENDING" || fail "Cannot complete reconciliation"

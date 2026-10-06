@@ -22,5 +22,14 @@ function packageNamesFromBridge(bridge){
 }
 function packageNamesFromPm(output){return cleanPackages(String(output||"").split(/\r?\n/).map(line=>line.trim().replace(/^package:/,"")))}
 function cleanPackages(values){return [...new Set(values.filter(validPackage))]}
-return{validPackage,validUserId,validLocale,normalizeConfig,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm}
+// Stable grouping from actual Android state. Saved preferences alone do not
+// prove that an app currently has a dedicated language.
+function hasDedicatedLocale(app){return app.locale?.ok===true&&app.locale.followSystem===false&&typeof app.locale.localeTag==='string'&&app.locale.localeTag.trim()!==''}
+function sortAppsByLocale(apps){return [...apps.filter(hasDedicatedLocale),...apps.filter(app=>!hasDedicatedLocale(app))]}
+function commonLocales(catalog){
+const chinese=[['zh-CN','zh-Hans-CN','zh-Hans'],['zh-TW','zh-Hant-TW','zh-Hant']];
+const resolveChinese=aliases=>aliases.find(tag=>catalog.includes(tag))||aliases[0];
+return ['en-US',resolveChinese(chinese[0]),resolveChinese(chinese[1]),'ja-JP','ko-KR','fr-FR','de-DE','es-ES','pt-BR'].filter(tag=>tag.startsWith('zh-')||catalog.includes(tag));
+}
+return{validPackage,validUserId,validLocale,normalizeConfig,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,hasDedicatedLocale,sortAppsByLocale,commonLocales}
 });

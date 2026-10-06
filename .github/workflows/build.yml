@@ -1,9 +1,9 @@
 name: KernelSU Next module
 on:
   push:
-    branches: [feature/ksu-next-foundation]
+    branches: [main, feature/ksu-next-foundation, feature/app-language-priority]
   pull_request:
-    branches: [feature/ksu-next-foundation]
+    branches: [main, feature/ksu-next-foundation, feature/app-language-priority]
   workflow_dispatch:
 permissions:
   contents: read

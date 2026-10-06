@@ -25,4 +25,8 @@ Language calls use Android 13+ `cmd locale get-app-locales` and `set-app-locales
 
 ## Offline language catalog
 
+Common languages always contain Simplified and Traditional Chinese. Exact `zh-CN`/`zh-TW` tags are preferred, followed by `zh-Hans-CN`/`zh-Hant-TW` and `zh-Hans`/`zh-Hant` when present in the device catalog. Missing Chinese entries fall back to `zh-CN`/`zh-TW`; catalog membership does not guarantee support by an application.
+
+Application list priority uses successfully read, nonempty dedicated locales from Android, not merely saved module preferences. Default, unread and failed states stay in the regular group. Relative order within each group is preserved; asynchronous reads, apply and restore update the order without rebuilding rows or resetting the content scroll position.
+
 The picker first calls Android's local `cmd locale list-device-locales` command and uses its one-tag-per-line BCP-47 output, de-duplicated and validated, when available. On Android 13+ builds that do not expose this command or return a usable list, it falls back to a bundled curated set of commonly used language and region tags. No network request is made. Labels are generated locally with the browser's built-in `Intl.DisplayNames` when available, with the tag as fallback. Device-supported locales do not guarantee support by every app; Android/app language support varies by package.

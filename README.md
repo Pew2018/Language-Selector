@@ -6,6 +6,8 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 
 - Installed packages through the Manager package API or an Android Package Manager shell fallback; labels and icons use Manager metadata APIs when available.
 - Search/filter, optional system-app display, actual locale reads, explicit locale set and restore-to-system-default.
+- Apps with a verified dedicated language appear first, with stable ordering inside both groups. Restoring system default returns the app to the regular group.
+- Common languages always offer Simplified and Traditional Chinese, including device script-tag variants. These choices do not translate unsupported app content.
 - Persistent per-package configuration for language choices and optional boot application.
 - Optional one-pass boot application after bounded service readiness checks.
 - Light/dark/system theme and classic Android system utility layout.

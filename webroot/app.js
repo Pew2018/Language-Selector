@@ -42,7 +42,7 @@ let iconObserver=null,iconTimer=null;
 const iconQueue=new Map();
 function makeAppIcon(app,lazy=false){
  const img=document.createElement("img");img.className="app-icon";img.alt="";img.width=40;img.height=40;
- img.onerror=()=>{img.onerror=null;img.removeAttribute("src");img.classList.add("icon-unavailable")};
+ img.onerror=()=>{img.onerror=null;img.classList.add("icon-unavailable");img.src="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40"><rect width="40" height="40" rx="4" fill="#757575"/><path fill="#eeeeee" d="M10 10h8v8h-8zm12 0h8v8h-8zM10 22h8v8h-8zm12 0h8v8h-8z"/></svg>')};
  if(app.icon)img.src=app.icon;
  else if(lazy&&typeof IntersectionObserver==="function"){
   if(!iconObserver)iconObserver=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){iconObserver.unobserve(e.target);queueIcon(e.target,e.target._app)}},{root:$("main"),rootMargin:"120px"});

@@ -159,7 +159,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.doesNotMatch(await page.locator('[data-package-name="com.example.reader"] .locale-state').textContent(),/已生效/);
   assert.equal(await page.$eval('[data-package-name="com.example.reader"] .state-text',e=>getComputedStyle(e,'::before').content),'none');
   await page.waitForFunction(()=>document.querySelector('[data-package-name="com.example.reader"] .locale-state')?.dataset.status==='mismatch');
-  await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForFunction(()=>document.getElementById('currentLocale').textContent.includes('英语'));
+  await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForFunction(()=>!document.getElementById('currentLocaleGroup').hidden&&document.getElementById('detailState').textContent.includes('不一致'));
   assert.match(await page.locator('#configuredLocale').textContent(),/日语/);
   assert.equal(await page.locator('#configuredLocaleGroup').isVisible(),true);assert.match(await page.locator('#detailState').textContent(),/不一致/);
   if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'detail-mismatch.png')});

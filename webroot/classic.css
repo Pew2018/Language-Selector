@@ -84,12 +84,12 @@ html[data-theme=dark] .search{background:rgba(255,255,255,.07)}
 
 /* MDC Web v14.0.0 linear-progress timing/geometry, adapted without its framework.
  * Copyright 2017 Google Inc. MIT license: docs/material-progress-LICENSE.txt. */
-.load-region{margin:12px 0 22px}
+.load-region{position:relative;margin:12px 0 22px;padding-bottom:14px}
 .load-caption{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 #listStatus.statusline{padding:0;min-width:0;flex:1;font-family:inherit;line-height:1.5}
 #listStatus:before{content:none}
 #listCount{flex:none;min-width:9ch;text-align:right;color:var(--secondary);font-size:12px;font-variant-numeric:tabular-nums;line-height:1.5}
-.linear-progress{position:relative;display:block;overflow:hidden;width:100%;height:4px;margin-top:10px;border:0;border-radius:0;box-shadow:none;background:var(--action-tonal);background:color-mix(in srgb,var(--control-accent) 18%,var(--surface))}
+.linear-progress{position:absolute;left:0;bottom:0;display:block;overflow:hidden;width:100%;height:4px;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--action-tonal);background:color-mix(in srgb,var(--control-accent) 18%,var(--surface))}
 html[data-theme=dark] .linear-progress{background:color-mix(in srgb,var(--control-accent) 28%,var(--surface))}
 .progress-bar,.bar-inner{position:absolute;inset:0;width:100%;height:100%;transform-origin:top left}
 .bar-inner{background:var(--control-accent)}

@@ -40,6 +40,16 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   });
   assert.ok(new Set(motion.samples.map(s=>s.primary)).size>20);assert.ok(new Set(motion.samples.map(s=>s.scale1)).size>20);
   assert.ok(new Set(motion.samples.map(s=>s.secondary)).size>20);assert.ok(new Set(motion.samples.map(s=>s.scale2)).size>20);
+  // MDC scales each inner segment around its center: both are outside the
+  // clipped track at the cycle boundary, so restart never jumps mid-track.
+  const cycleBoundary=await page.evaluate(()=>{
+   const track=document.getElementById('listProgress'),animations=track.getAnimations({subtree:true}),rect=track.getBoundingClientRect();
+   const sample=time=>{animations.forEach(a=>{a.pause();a.currentTime=time});return [...track.querySelectorAll('.bar-inner')].map(e=>{const r=e.getBoundingClientRect();return{left:r.left,right:r.right}})};
+   const initial=sample(0),end=sample(1999);animations.forEach(a=>{a.currentTime=0;a.play()});return{initial,end,left:rect.left,right:rect.right};
+  });
+  assert.ok(cycleBoundary.initial.every(r=>r.right<=cycleBoundary.left+1));
+  assert.ok(cycleBoundary.end.every(r=>r.left>=cycleBoundary.right-1));
+  motion.cycleBoundary=cycleBoundary;
   if(process.env.LS_SCREENSHOT_DIR){fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'progress-motion-observation.json'),JSON.stringify(motion,null,2));await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'progress-running.png')});}
   await page.click('[data-page=settings]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'paused');
   await page.click('[data-page=apps]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'running');

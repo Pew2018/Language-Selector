@@ -15,6 +15,16 @@ jobs:
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
+      - name: Read module artifact version
+        id: module
+        shell: bash
+        run: |
+          version="$(sed -n 's/^version=//p' module.prop)"
+          if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9]+([.-][A-Za-z0-9]+)*)?$ ]]; then
+            echo "Invalid module version for artifact naming" >&2
+            exit 1
+          fi
+          echo "name=language-selector-$version" >> "$GITHUB_OUTPUT"
       - name: Validate JavaScript and configuration logic
         run: |
           node --check webroot/bridge.js
@@ -49,27 +59,29 @@ jobs:
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
-          name: language-selector-webui-qa
+          name: ${{ steps.module.outputs.name }}-webui-qa
           path: ui-qa/
           if-no-files-found: ignore
       - name: Package KernelSU module
+        env:
+          MODULE_ARTIFACT_NAME: ${{ steps.module.outputs.name }}
         run: |
           mkdir -p dist/module
           cp -R module.prop customize.sh boot-completed.sh uninstall.sh security.sh control.sh webroot docs dist/module/
-          (cd dist/module && zip -qr ../module-check.zip .)
-          unzip -t dist/module-check.zip
-          unzip -l dist/module-check.zip
-          sha256sum dist/module-check.zip > dist/module-check.zip.sha256
+          (cd dist/module && zip -qr "../$MODULE_ARTIFACT_NAME.zip" .)
+          unzip -t "dist/$MODULE_ARTIFACT_NAME.zip"
+          unzip -l "dist/$MODULE_ARTIFACT_NAME.zip"
+          (cd dist && sha256sum "$MODULE_ARTIFACT_NAME.zip" > "$MODULE_ARTIFACT_NAME.zip.sha256")
           git rev-parse HEAD > dist/build-commit.txt
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: language-selector-ksu-next-module
+          name: ${{ steps.module.outputs.name }}
           path: dist/module/
           if-no-files-found: error
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: language-selector-build-integrity
+          name: ${{ steps.module.outputs.name }}-build-integrity
           path: |
-            dist/module-check.zip
-            dist/module-check.zip.sha256
+            dist/${{ steps.module.outputs.name }}.zip
+            dist/${{ steps.module.outputs.name }}.zip.sha256
             dist/build-commit.txt

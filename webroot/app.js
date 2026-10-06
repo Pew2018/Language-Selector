@@ -1,11 +1,12 @@
 (function(){
 "use strict";
 const C=window.LSCore,P=window.LSPresentation;
+const WEBUI_VERSION="0.1.6";
 const DATA="/data/adb/language_selector_ksu_data";
 const CONFIG=DATA+"/config.v1";
 const $=id=>document.getElementById(id);
 const storage={getItem:key=>{try{return localStorage.getItem(key)}catch(_){return null}},setItem:(key,value)=>{try{localStorage.setItem(key,value)}catch(_){}}};
-const S={apps:[],selected:null,configs:{schemaVersion:1,autoApplyOnBoot:false,apps:[]},page:"apps",search:"",showSystem:false,loading:false,loadGeneration:0,errors:[],operation:"",bootRaw:"",configValid:false,configError:"",operationState:null,refreshing:false,diagnosing:false,localeLoading:false,localeFailures:0,detailRead:0,restoring:null,lastAction:null,showIcons:storage.getItem("language_selector.showAppIcons")!=="false",showNames:storage.getItem("language_selector.showAppNames")!=="false",localeQuery:"",user:null,sdk:null};
+const S={apps:[],selected:null,configs:{schemaVersion:1,autoApplyOnBoot:false,apps:[]},page:"apps",search:"",showSystem:false,loading:false,loadGeneration:0,errors:[],operation:"",bootRaw:"",configValid:false,configError:"",operationState:null,refreshing:false,diagnosing:false,localeLoading:false,localeFailures:0,detailRead:0,listPreparing:false,restoring:null,lastAction:null,showIcons:storage.getItem("language_selector.showAppIcons")!=="false",showNames:storage.getItem("language_selector.showAppNames")!=="false",localeQuery:"",user:null,sdk:null};
 const BUNDLED_LOCALES=("af ar az be bg bn bs ca cs cy da de el en es et eu fa fi fil fr ga gl gu he hi hr hu hy id is it ja ka kk km kn ko lo lt lv mk ml mn mr ms mt my nb ne nl nn no pa pl pt ro ru sk sl sq sr sv sw ta te th uk ur uz vi zh zh-Hans zh-Hant en-US en-GB en-AU en-CA en-IN en-NZ en-SG en-ZA es-ES es-MX es-AR es-CO es-CL es-US fr-FR fr-CA fr-BE fr-CH pt-BR pt-PT zh-CN zh-TW zh-HK zh-SG zh-Hans-CN zh-Hant-TW zh-Hant-HK ja-JP ko-KR de-DE de-AT de-CH it-IT nl-NL nl-BE ru-RU uk-UA ar-EG ar-SA hi-IN bn-BD bn-IN pa-IN ta-IN ta-LK te-IN ur-PK fa-IR id-ID ms-MY th-TH vi-VN fil-PH tr-TR pl-PL cs-CZ sk-SK hu-HU ro-RO bg-BG el-GR he-IL sv-SE da-DK nb-NO fi-FI").split(" ");
 let busy=false,initialized=false,uncertain=false;
 function updateBusy(){
@@ -186,7 +187,7 @@ document.addEventListener("visibilitychange",syncProgressVisibility);
 window.addEventListener("pagehide",()=>{document.documentElement.dataset.progressPaused="true"});
 window.addEventListener("pageshow",syncProgressVisibility);
 function visibleApps(){const q=$("search").value.trim().toLowerCase();return C.sortAppsByLocale(S.apps,S.configs.apps).filter(a=>(S.showSystem||!a.isSystem)&&(!q||(S.showNames&&a.appLabel.toLowerCase().includes(q))||a.packageName.toLowerCase().includes(q)))}
-function showListSummary(){if(S.loading||S.localeLoading)return;const count=visibleApps().length;$("listStatus").textContent="已加载 "+S.apps.length+" 个应用 · 当前显示 "+count+" 个"+(S.localeFailures?" · "+S.localeFailures+" 个语言设置无法读取":"")}
+function showListSummary(){if(S.loading||S.localeLoading||S.listPreparing)return;const count=visibleApps().length;$("listStatus").textContent="已加载 "+S.apps.length+" 个应用 · 当前显示 "+count+" 个"+(S.localeFailures?" · "+S.localeFailures+" 个语言设置无法读取":"")}
 let reorderFrame=null;
 function scheduleAppOrder(){
  if(reorderFrame!==null)return;reorderFrame=requestAnimationFrame(()=>{
@@ -238,7 +239,9 @@ async function loadDiagnostics(){
  try{const r=await execAsync("getprop ro.build.version.release");if(r.code===0)sys=r.out.trim()}catch(e){recordError(e.message)}
  try{const r=await execAsync("command -v cmd >/dev/null 2>&1 || { printf unavailable; exit; }; help=$(cmd locale help 2>&1); case \"$help\" in *get-app-locales*) case \"$help\" in *set-app-locales*) printf available;; *) printf unavailable;; esac;; *) printf unavailable;; esac");if(r.code===0)cmd=r.out.trim()}catch(e){recordError(e.message)}
  const bridge=api(),rootAPI=bridge&&(typeof bridge.spawn==="function"||typeof bridge.exec==="function");
- const rows=[["当前 Android 用户",S.user||"无法确认"],["待恢复操作",S.operationState===null?"无法确认":S.operationState==="pending"?"需要核对":"无"],["Android",sys?sys+" (API "+S.sdk+")":"无法确认"],["KernelSU Next 接口",rootAPI?"可用":"不可用"],["应用列表接口",C.packageNamesFromBridge(bridge)?"可用":"使用系统包管理器"],["图标读取",bridge&&typeof bridge.getPackagesIcons==="function"?"可用":"宿主图标回退"],["cmd locale",cmd==="available"?"可用":"不可用"],["语言列表",LOCALE_CATALOG_SOURCE],["配置检查",S.configValid?"通过":"未通过"],["上次保存",storage.getItem("language_selector.saved."+S.user)||"暂无记录"]];
+ const progressStyle=getComputedStyle($("listProgress")),segmentStyle=getComputedStyle($("listProgress").querySelector(".ls-progress__primary")),reduced=matchMedia("(prefers-reduced-motion: reduce)").matches;
+ const progressReady=progressStyle.height==="4px"&&(reduced||segmentStyle.animationName.includes("ls-primary-translate"));
+ const rows=[["WebUI 版本",WEBUI_VERSION],["加载动画",!progressReady?"样式未加载":reduced?"静态提示（系统要求减少动态效果）":"双线段动画已加载"],["当前 Android 用户",S.user||"无法确认"],["待恢复操作",S.operationState===null?"无法确认":S.operationState==="pending"?"需要核对":"无"],["Android",sys?sys+" (API "+S.sdk+")":"无法确认"],["KernelSU Next 接口",rootAPI?"可用":"不可用"],["应用列表接口",C.packageNamesFromBridge(bridge)?"可用":"使用系统包管理器"],["图标读取",bridge&&typeof bridge.getPackagesIcons==="function"?"可用":"宿主图标回退"],["cmd locale",cmd==="available"?"可用":"不可用"],["语言列表",LOCALE_CATALOG_SOURCE],["配置检查",S.configValid?"通过":"未通过"],["上次保存",storage.getItem("language_selector.saved."+S.user)||"暂无记录"]];
  for(const [k,v]of rows){const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=k;dd.textContent=v;host.append(dt,dd)}
  renderCurrentStatus(cmd==="available");const raw=[];
  try{const out=await backend("status");S.bootRaw=out;raw.push(out);const history=P.bootResult(out);
@@ -266,7 +269,21 @@ function setDetailSearch(active){
 function installTapFeedback(){LSUI.bind()}
 function addNav(){
 LSUI.init({page:page=>{S.page=page;syncProgressVisibility();if(page!=="detail")setDetailSearch(false);if(page==="apps"&&initialized&&!S.apps.length&&!S.loading)void loadApps()},detail:pkg=>{const app=S.apps.find(x=>x.packageName===pkg)||S.selected;if(!app||app.packageName!==pkg)return false;renderDetail(app);return true},diagnostics:loadDiagnostics,error:e=>{recordError(e.message);announce(P.errorText(e))}});
-$("refresh").onclick=async()=>{if(S.refreshing||busy||S.loading)return;S.refreshing=true;updateBusy();try{await loadConfig();if(S.page==="detail"&&S.selected)await refreshAppLocale(S.selected);else await loadApps()}finally{S.refreshing=false;updateBusy()}};
+$("refresh").onclick=async()=>{
+ if(S.refreshing||busy||S.loading)return;
+ const listRefresh=S.page==="apps";
+ S.refreshing=true;
+ if(listRefresh){
+  // Invalidate old background reads before starting the new configuration check.
+  ++S.loadGeneration;S.localeLoading=false;S.listPreparing=true;
+  for(const app of S.apps)if(app.checking){app.checking=false;updateLocaleRow(app)}
+  setProgress(null);$("listStatus").textContent="正在检查配置…";
+ }
+ updateBusy();
+ try{await loadConfig();if(S.page==="detail"&&S.selected)await refreshAppLocale(S.selected);else{S.listPreparing=false;await loadApps()}}
+ catch(e){if(listRefresh){setProgress(false);$("listStatus").textContent="刷新未完成："+P.errorText(e)}recordError(e.message)}
+ finally{S.listPreparing=false;S.refreshing=false;updateBusy();if(listRefresh&&!S.loading&&!S.localeLoading)setProgress(false)}
+};
 $("copyLogs").onclick=copyLogs;
 $("wrapLogs").onclick=()=>{const wrap=$("wrapLogs").getAttribute("aria-pressed")!=="true";$("wrapLogs").setAttribute("aria-pressed",String(wrap));$("rawStatus").classList.toggle("wrap",wrap)};
 $("localeSearch").addEventListener("focus",()=>setDetailSearch(true));

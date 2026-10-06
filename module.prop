@@ -1,6 +1,6 @@
 id=language_selector_ksu
 name=Language Selector
-version=0.1.5
-versionCode=6
+version=0.1.6
+versionCode=7
 author=Patrick
 description=Manage Android 13+ per-app language preferences from KernelSU Next WebUI

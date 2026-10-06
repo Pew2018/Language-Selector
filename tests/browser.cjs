@@ -41,6 +41,17 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.waitForSelector('html[data-loading="false"]');
   assert.equal(await page.locator('#startupProgress').isVisible(),false);
   assert.equal(await page.$eval('#startupProgress .ls-progress__primary',e=>getComputedStyle(e).animationName),'none');
+  // The main-page indicator must be visible before any configuration callback,
+  // and superseded workers must not hide it while those callbacks are pending.
+  await page.evaluate(()=>{mockDelay=220;mockReadDelay=220});
+  const refreshStart=await page.evaluate(()=>{document.getElementById('refresh').click();return{visible:!document.getElementById('listProgress').hidden,text:document.getElementById('listStatus').textContent,countVisible:!document.getElementById('listCount').hidden}});
+  assert.equal(refreshStart.visible,true);assert.equal(refreshStart.text,'正在检查配置…');assert.equal(refreshStart.countVisible,false);
+  await page.fill('#search','reader');assert.match(await page.locator('#listStatus').textContent(),/正在检查配置/);await page.click('#searchClear');
+  await page.waitForTimeout(150);assert.equal(await page.locator('#listProgress').isVisible(),true);
+  if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'main-refresh-config-check.png')});
+  await page.waitForFunction(()=>!document.getElementById('refresh').disabled);
+  await page.waitForFunction(()=>document.getElementById('listProgress').hidden);
+  await page.evaluate(()=>{mockDelay=3;mockReadDelay=3});
   // Observe real CSS animation over a complete cycle; counts never drive its geometry.
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(()=>{mockReadDelay=5000});
@@ -147,6 +158,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.click('[data-page=settings]');await page.click('#diagnosticsLink');
   await page.waitForFunction(()=>document.getElementById('operationStatus').textContent.includes('开机应用已关闭'));
   assert.match(await page.locator('#diagnostics').textContent(),/cmd locale可用/);
+  assert.match(await page.locator('#diagnostics').textContent(),/WebUI 版本0.1.6/);assert.match(await page.locator('#diagnostics').textContent(),/双线段动画已加载/);
   await page.click('#rawLogs summary');await page.click('#wrapLogs');assert.equal(await page.getAttribute('#wrapLogs','aria-pressed'),'true');
   await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.click('#copyLogs');
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),await page.locator('#rawStatus').textContent());

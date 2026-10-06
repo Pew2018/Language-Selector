@@ -29,3 +29,14 @@ test('user errors are Chinese while the original error remains untouched',()=>{
  assert.match(P.errorText('Android user changed; refresh before continuing'),/Android 用户变化/);
  assert.match(P.errorText('unexpected native exception'),/原始日志/);
 });
+
+test('compact details preserve saved/current distinction and all Android override languages',()=>{
+ const target=saved[0],actual={ok:true,followSystem:false,localeTag:'zh-CN'};
+ let d=P.detailState(app(actual),target);assert.equal(d.showConfigured,false);assert.equal(d.text,'✓ 与配置一致');
+ d=P.detailState(app({ok:true,followSystem:false,localeTag:'en-US'}),target);assert.equal(d.showCurrent,true);assert.equal(d.showConfigured,true);assert.equal(d.kind,'mismatch');
+ d=P.detailState({...app(null),checking:true},target);assert.equal(d.showCurrent,false);assert.equal(d.showConfigured,true);assert.match(d.text,/正在确认/);
+ d=P.detailState(app({ok:false}),target);assert.equal(d.showConfigured,true);assert.equal(d.text,'无法确认是否生效');
+ d=P.detailState(app({ok:false}),null);assert.equal(d.showCurrent,false);assert.equal(d.showConfigured,false);
+ d=P.detailState(app({ok:true,followSystem:true}),{followSystem:true});assert.equal(d.showConfigured,false);
+ const multi={...actual,localeTags:['zh-CN','en-US']};assert.deepEqual(P.actualTags(multi),['zh-CN','en-US']);assert.equal(P.detailState(app(multi),target).kind,'mismatch');assert.match(P.readingText(multi),/英语/);
+});

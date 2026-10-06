@@ -5,7 +5,7 @@ const DATA="/data/adb/language_selector_ksu_data";
 const CONFIG=DATA+"/config.v1";
 const $=id=>document.getElementById(id);
 const storage={getItem:key=>{try{return localStorage.getItem(key)}catch(_){return null}},setItem:(key,value)=>{try{localStorage.setItem(key,value)}catch(_){}}};
-const S={apps:[],selected:null,configs:{schemaVersion:1,autoApplyOnBoot:false,apps:[]},page:"apps",search:"",showSystem:false,loading:false,loadGeneration:0,errors:[],operation:"",bootRaw:"",configValid:false,configError:"",operationState:null,refreshing:false,diagnosing:false,localeLoading:false,localeFailures:0,detailRead:0,lastAction:null,showIcons:storage.getItem("language_selector.showAppIcons")!=="false",showNames:storage.getItem("language_selector.showAppNames")!=="false",localeQuery:"",user:null,sdk:null};
+const S={apps:[],selected:null,configs:{schemaVersion:1,autoApplyOnBoot:false,apps:[]},page:"apps",search:"",showSystem:false,loading:false,loadGeneration:0,errors:[],operation:"",bootRaw:"",configValid:false,configError:"",operationState:null,refreshing:false,diagnosing:false,localeLoading:false,localeFailures:0,detailRead:0,restoring:null,lastAction:null,showIcons:storage.getItem("language_selector.showAppIcons")!=="false",showNames:storage.getItem("language_selector.showAppNames")!=="false",localeQuery:"",user:null,sdk:null};
 const BUNDLED_LOCALES=("af ar az be bg bn bs ca cs cy da de el en es et eu fa fi fil fr ga gl gu he hi hr hu hy id is it ja ka kk km kn ko lo lt lv mk ml mn mr ms mt my nb ne nl nn no pa pl pt ro ru sk sl sq sr sv sw ta te th uk ur uz vi zh zh-Hans zh-Hant en-US en-GB en-AU en-CA en-IN en-NZ en-SG en-ZA es-ES es-MX es-AR es-CO es-CL es-US fr-FR fr-CA fr-BE fr-CH pt-BR pt-PT zh-CN zh-TW zh-HK zh-SG zh-Hans-CN zh-Hant-TW zh-Hant-HK ja-JP ko-KR de-DE de-AT de-CH it-IT nl-NL nl-BE ru-RU uk-UA ar-EG ar-SA hi-IN bn-BD bn-IN pa-IN ta-IN ta-LK te-IN ur-PK fa-IR id-ID ms-MY th-TH vi-VN fil-PH tr-TR pl-PL cs-CZ sk-SK hu-HU ro-RO bg-BG el-GR he-IL sv-SE da-DK nb-NO fi-FI").split(" ");
 let busy=false,initialized=false,uncertain=false;
 function updateBusy(){
@@ -30,7 +30,7 @@ function command(parts){return parts.join(" ")}
 function getUser(){return execAsync("am get-current-user").then(r=>{const u=r.out.trim();if(r.code!==0||!C.validUserId(u))throw Error("Unable to determine current Android user");return u})}
 function localeCommand(action,pkg,user,tag){if(!C.validPackage(pkg))throw Error("Invalid package name");if(!C.validUserId(user))throw Error("Invalid Android user");const q=C.shellQuote;let p=["cmd","locale",action,q(pkg),"--user",q(user)];if(action==="set-app-locales"&&tag!==undefined){if(tag!==""&&!C.validLocale(tag))throw Error("Invalid BCP-47 Locale tag");if(tag!=="")p.push("--locales",q(tag))}return command(p)}
 function checkPlatform(){const sdk=S.sdk;if(sdk===null||sdk<33)throw Error("Android 13 or later is required")}
-async function readLocale(pkg,userOverride){try{checkPlatform();const user=userOverride===undefined?await getUser():userOverride;const r=await execAsync(localeCommand("get-app-locales",pkg,user));const parsed=C.parseLocaleOutput(r.out,pkg,user);if(r.code!==0)return{ok:false,reason:/not found|unknown command|not recognized/i.test(r.err+r.out)?"command-unavailable":parsed.reason,raw:r.err||r.out};if(!parsed.ok)return{ok:false,reason:parsed.reason,raw:parsed.raw};return parsed}catch(e){return{ok:false,reason:/Android 13/i.test(e.message)?"unsupported":/user/i.test(e.message)?"user-unavailable":"command-unavailable",raw:e.message}}}
+async function readLocale(pkg,userOverride){try{checkPlatform();const user=userOverride===undefined?await getUser():userOverride;const r=await execAsync(localeCommand("get-app-locales",pkg,user));const parsed=C.parseLocaleOutput(r.out,pkg,user);if(r.code!==0)return{ok:false,reason:/not found|unknown command|not recognized/i.test(r.err+r.out)?"command-unavailable":parsed.reason,raw:r.err||r.out};if(!parsed.ok)return{ok:false,reason:parsed.reason,raw:parsed.raw};if(parsed.ok&&!parsed.followSystem)parsed.localeTags=r.out.trim().match(/\[([^\]]*)\]$/)[1].split(",").map(t=>t.trim());return parsed}catch(e){return{ok:false,reason:/Android 13/i.test(e.message)?"unsupported":/user/i.test(e.message)?"user-unavailable":"command-unavailable",raw:e.message}}}
 function statusText(x){return P.readingText(x)}
 function nativeList(){return C.packageNamesFromBridge(api())}
 async function loadLocaleCatalog(){try{const r=await execAsync("cmd locale list-device-locales 2>&1");const tags=C.parseDeviceLocales(r.out);if(tags.length){DEVICE_LOCALES=tags;LOCALE_CATALOG_SOURCE="设备语言列表（"+tags.length+"）";if(S.page==="detail")renderLocales();return}}catch(e){}DEVICE_LOCALES=[];LOCALE_CATALOG_SOURCE="离线备用列表（"+BUNDLED_LOCALES.length+"）";if(S.page==="detail")renderLocales()}
@@ -39,18 +39,22 @@ async function saveConfig(next){if(!S.configValid||uncertain)throw Error("配置
 let snackTimer=null;
 function announce(text){const t=$("toast");clearTimeout(snackTimer);t.textContent=text;t.classList.add("show");snackTimer=setTimeout(()=>t.classList.remove("show"),3200)}
 function showDialog(title,message,actions){LSUI.showDialog(title,message,actions.map(a=>({...a,run:a.run?()=>mutation(a.run):undefined})))}
-function languageValue(host,tag,followSystem=false){
- host.replaceChildren();const main=document.createElement("div");main.textContent=followSystem?"跟随系统":langLabel(tag);host.append(main);
- if(!followSystem&&main.textContent!==tag){const code=document.createElement("small");code.className="language-code";code.textContent=tag;host.append(code)}
+function languageValue(host,tags,followSystem=false){
+ host.replaceChildren();for(const tag of followSystem?[null]:Array.isArray(tags)?tags:[tags]){
+ const value=document.createElement("div");value.className="language-value";const main=document.createElement("div");main.textContent=followSystem?"跟随系统":langLabel(tag);value.append(main);
+ if(!followSystem&&main.textContent!==tag){const code=document.createElement("small");code.className="language-code";code.textContent=tag;value.append(code)}host.append(value)}
 }
 function syncDetailState(app){
  if(S.selected!==app)return;
  const actual=app.locale,entry=S.configs.apps.find(x=>x.packageName===app.packageName);
- if(actual?.ok)languageValue($("currentLocale"),actual.localeTag,actual.followSystem);else $("currentLocale").textContent=app.checking?"正在读取语言设置…":statusText(actual);
- if(entry)languageValue($("configuredLocale"),entry.localeTag,entry.followSystem);else $("configuredLocale").textContent=S.configValid?"未配置":"无法确认已配置语言";
- const state=P.configuredState(app,S.configs.apps);$("detailState").textContent=state.configured?[state.text,state.note].filter(Boolean).join(" · "):"";
- $("detailState").dataset.status=state.kind;
- $("restoreDefault").querySelector("span").textContent=actual?.ok&&actual.followSystem?"当前跟随系统":"恢复跟随系统";
+ const state=P.detailState(app,entry);
+ $("currentLocaleGroup").hidden=!state.showCurrent;$("configuredLocaleGroup").hidden=!state.showConfigured;
+ if(state.showCurrent)languageValue($("currentLocale"),P.actualTags(actual),actual.followSystem);
+ if(state.showConfigured)languageValue($("configuredLocale"),entry.localeTag,entry.followSystem);
+ $("detailState").textContent=state.text;$("detailState").hidden=!state.text;$("detailState").dataset.status=state.kind;
+ const following=actual?.ok&&actual.followSystem;
+ $("followSystemStatus").hidden=!following||S.restoring===app;$("restoreDefault").hidden=!!following&&S.restoring!==app;
+ $("restoreDefault").querySelector("span").textContent=S.restoring===app?"正在恢复…":"恢复跟随系统";
  const identity=S.showNames?(app.appLabel||app.packageName):app.packageName;
  $("detailSummary").textContent=identity+" · 当前："+(actual?.ok?statusText(actual):"尚未确认");
  renderLocales();updateBusy();
@@ -64,7 +68,7 @@ async function refreshAppLocale(app,user=S.user){
  return result;
 }
 function renderDetail(app){
- S.selected=app;S.page="detail";$("appsPage").classList.add("hidden");$("detailPage").classList.remove("hidden");$("settingsPage").classList.add("hidden");$("diagnosticsPage").classList.add("hidden");$("back").classList.remove("hidden");$("refresh").classList.remove("hidden");$("title").textContent="Language Selector";
+ S.selected=app;S.page="detail";syncProgressVisibility();$("appsPage").classList.add("hidden");$("detailPage").classList.remove("hidden");$("settingsPage").classList.add("hidden");$("diagnosticsPage").classList.add("hidden");$("back").classList.remove("hidden");$("refresh").classList.remove("hidden");$("title").textContent="Language Selector";
  const head=$("appHeader");head.replaceChildren();const icon=S.showIcons?makeAppIcon(app):null,copy=document.createElement("div"),name=document.createElement("div");name.className="app-name";name.textContent=S.showNames?(app.appLabel||app.packageName):app.packageName;
  copy.append(name);if(S.showNames){const pkg=document.createElement("div");pkg.className="package";pkg.textContent=app.packageName;copy.append(pkg)}if(icon)head.append(icon);head.append(copy);
  document.querySelector(".bottom-nav").hidden=true;$("actionStatus").hidden=true;syncDetailState(app);void refreshAppLocale(app);
@@ -82,7 +86,7 @@ function renderLocales(){
    const b=document.createElement("button");b.type="button";b.className="locale-option";
    const copy=document.createElement("span");copy.className="locale-copy";const title=document.createElement("span");title.textContent=langLabel(tag);copy.append(title);
    if(title.textContent!==tag){const sub=document.createElement("small");sub.textContent=tag;copy.append(sub)}
-   const current=app?.locale?.ok&&!app.locale.followSystem&&C.sameLocale(app.locale.localeTag,tag),configured=entry&&!entry.followSystem&&C.sameLocale(entry.localeTag,tag),marks=document.createElement("span");marks.className="locale-marks";
+   const current=app?.locale?.ok&&!app.locale.followSystem&&P.actualTags(app.locale).some(t=>C.sameLocale(t,tag)),configured=entry&&!entry.followSystem&&C.sameLocale(entry.localeTag,tag),marks=document.createElement("span");marks.className="locale-marks";
    if(current){const mark=document.createElement("span");mark.className="current-mark";mark.textContent="✓ 当前";marks.append(mark)}
    if(configured){const mark=document.createElement("span");mark.className="configured-mark";mark.textContent="已配置";marks.append(mark)}
    b.append(copy,marks);b.dataset.localeTag=tag;b.setAttribute("aria-pressed",String(!!current));b.onclick=()=>applyLocale(tag);host.append(b);
@@ -98,7 +102,7 @@ function appendEmpty(host,message,inputId){
 async function applyLocale(tag){const app=S.selected;if(!app||!C.validLocale(tag))return;showDialog("应用语言","将 "+langLabel(tag)+" 设置到 "+app.packageName+"？应用可能需要重新启动才能显示变化。",[{label:"取消"},{label:"应用",run:async()=>{await performLocale(app,tag)}}])}
 async function restoreDefault(){
  const app=S.selected;if(!app||!app.locale?.ok||app.locale.followSystem)return;
- await mutation(()=>performLocale(app,null));
+ await mutation(async()=>{S.restoring=app;syncDetailState(app);try{await performLocale(app,null)}finally{S.restoring=null;syncDetailState(app)}});
 }
 function showAction(text,error=false,app=null){
  if(app&&S.selected!==app)return;
@@ -106,13 +110,13 @@ function showAction(text,error=false,app=null){
 }
 async function performLocale(app,tag){
  let submitted=false;app.readSerial=(app.readSerial||0)+1;
- showAction("正在保存并应用…",false,app);announce("正在应用…");
+ showAction(tag===null?"正在恢复…":"正在保存并应用…",false,app);announce(tag===null?"正在恢复…":"正在应用…");
  try{
   if(!S.configValid||uncertain)throw Error("配置不可用，已禁止修改");checkPlatform();
   if(await getUser()!==S.user)throw Error("Android 用户已切换，请刷新");
   submitted=true;await acceptConfig(await backend("locale",[app.packageName,tag===null?"@system":tag],true));
   const actual=await refreshAppLocale(app);storage.setItem("language_selector.saved."+S.user,new Date().toLocaleString());
-  const matched=actual?.ok&&(tag===null?actual.followSystem:!actual.followSystem&&C.sameLocale(actual.localeTag,tag));
+  const matched=actual?.ok&&(tag===null?actual.followSystem:!actual.followSystem&&P.actualTags(actual).length===1&&C.sameLocale(actual.localeTag,tag));
   S.operation=matched?(tag===null?"已恢复跟随系统":"已生效："+langLabel(tag)):"配置已保存，当前设置尚未确认";
   storage.setItem("language_selector.operation."+S.user,S.operation+" · "+app.packageName);
   storage.setItem("language_selector.operationTime."+S.user,new Date().toISOString());
@@ -159,19 +163,28 @@ async function yieldTask(){return new Promise(resolve=>setTimeout(resolve,0))}
 function parsePmPackages(output){return C.packageNamesFromPm(output)}
 async function shellPackageList(){const user=await getUser(),q=C.shellQuote;async function run(flag){return execAsync("cmd package list packages --user "+q(user)+" "+flag+" 2>&1")}let system=[],userApps=[];const sr=await run("-s"),ur=await run("-3");if(sr.code===0)system=parsePmPackages(sr.out);if(ur.code===0)userApps=parsePmPackages(ur.out);if(!system.length&&!userApps.length){const all=await run("");if(all.code!==0)throw Error(all.err||all.out||"Package Manager could not list installed apps");return parsePmPackages(all.out).map(packageName=>({packageName,isSystem:false}))}const systemSet=new Set(system);return [...new Set([...system,...userApps])].map(packageName=>({packageName,isSystem:systemSet.has(packageName)}))}
 async function loadApps(){if(S.loading)return;const generation=++S.loadGeneration;S.loading=true;S.localeLoading=false;updateBusy();setProgress(null);$("listStatus").textContent="正在加载已安装应用…";$("appList").replaceChildren();try{let names=nativeList(),shellEntries=null;if(!names||S.user!=="0"||!S.showNames){shellEntries=await shellPackageList();names=shellEntries.map(x=>x.packageName)}const unique=[...new Set(names.filter(C.validPackage))];if(!unique.length){$("listStatus").textContent="未返回已安装应用，请检查 Manager 的 Shell 权限。";S.apps=[];setProgress(false);return}
-const all=[];if(S.showNames&&api()&&typeof ksu.getPackagesInfo==="function"){for(let i=0;i<unique.length;i+=50){const batch=unique.slice(i,i+50);try{const infos=parseNative(ksu.getPackagesInfo(JSON.stringify(batch)));if(Array.isArray(infos))all.push(...infos.filter(x=>!x.error))}catch(e){S.errors.push("Some app labels could not be read: "+e.message)}$("listStatus").textContent="正在读取应用信息… "+Math.min(i+50,unique.length)+" / "+unique.length;setProgress(Math.min(i+50,unique.length),unique.length);await yieldTask()}}
-const infoMap=new Map(all.map(x=>[x.packageName,x])),systemMap=new Map((shellEntries||[]).map(x=>[x.packageName,x.isSystem]));S.apps=unique.map(pkg=>{const x=infoMap.get(pkg)||{};return{packageName:pkg,appLabel:typeof x.appLabel==="string"?x.appLabel.slice(0,256):pkg,isSystem:typeof x.isSystem==="boolean"?x.isSystem:!!systemMap.get(pkg),icon:"",locale:null,checking:false,readSerial:0}});S.localeLoading=true;setProgress(0,S.apps.length);$("listStatus").textContent="正在读取语言设置… 0 / "+S.apps.length;renderApps();const apps=S.apps;void(async()=>{let user=null,userError=null;try{user=await getUser();if(user!==S.user)throw Error("Android user changed; refresh")}catch(e){userError=e}let i=0,at=0;async function worker(){while(at<apps.length){
+const all=[];if(S.showNames&&api()&&typeof ksu.getPackagesInfo==="function"){for(let i=0;i<unique.length;i+=50){const batch=unique.slice(i,i+50);try{const infos=parseNative(ksu.getPackagesInfo(JSON.stringify(batch)));if(Array.isArray(infos))all.push(...infos.filter(x=>!x.error))}catch(e){S.errors.push("Some app labels could not be read: "+e.message)}$("listStatus").textContent="正在读取应用信息…";setProgress(Math.min(i+50,unique.length),unique.length);await yieldTask()}}
+const infoMap=new Map(all.map(x=>[x.packageName,x])),systemMap=new Map((shellEntries||[]).map(x=>[x.packageName,x.isSystem]));S.apps=unique.map(pkg=>{const x=infoMap.get(pkg)||{};return{packageName:pkg,appLabel:typeof x.appLabel==="string"?x.appLabel.slice(0,256):pkg,isSystem:typeof x.isSystem==="boolean"?x.isSystem:!!systemMap.get(pkg),icon:"",locale:null,checking:false,readSerial:0}});S.localeLoading=true;setProgress(0,S.apps.length);$("listStatus").textContent="正在读取语言设置…";renderApps();const apps=S.apps;void(async()=>{let user=null,userError=null;try{user=await getUser();if(user!==S.user)throw Error("Android user changed; refresh")}catch(e){userError=e}let i=0,at=0;async function worker(){while(at<apps.length){
  if(generation!==S.loadGeneration)return;const item=apps[at++],serial=(item.readSerial||0)+1;item.readSerial=serial;item.checking=true;updateLocaleRow(item);
  const result=userError?{ok:false,reason:"user-unavailable",raw:userError.message}:await readLocale(item.packageName,user);
  if(generation!==S.loadGeneration)return;
  if(item.readSerial===serial){item.locale=result;item.checking=false;updateLocaleRow(item)}
- i++;if(i%15===0||i===apps.length){$("listStatus").textContent="正在读取语言设置… "+i+" / "+apps.length;setProgress(i,apps.length)}await yieldTask()
-}}await Promise.all(Array.from({length:6},worker));if(generation===S.loadGeneration){S.localeFailures=apps.filter(x=>!x.locale?.ok).length;S.localeLoading=false;setProgress(false);showListSummary()}})()}catch(e){setProgress(false);S.localeLoading=false;$("listStatus").textContent="无法加载应用："+P.errorText(e);S.errors.unshift(e.message);recordError("App list: "+e.message)}finally{S.loading=false;updateBusy()}}
-function setProgress(value,total){
- const progress=$("listProgress");progress.hidden=value===false;
- if(value===false)return;if(value===null||!total){progress.removeAttribute("value");progress.removeAttribute("aria-valuenow");return}
- progress.max=total;progress.value=value;progress.setAttribute("aria-valuetext",value+" / "+total);
+ i++;if(i%15===0||i===apps.length){$("listStatus").textContent="正在读取语言设置…";setProgress(i,apps.length)}await yieldTask()
+}}await Promise.all(Array.from({length:6},worker));if(generation===S.loadGeneration){S.localeFailures=apps.filter(x=>!x.locale?.ok).length;S.localeLoading=false;setProgress(false);showListSummary()}})().catch(e=>{if(generation!==S.loadGeneration)return;S.localeLoading=false;setProgress(false);$("listStatus").textContent="语言设置读取中断："+P.errorText(e);recordError(e.message)})}catch(e){setProgress(false);S.localeLoading=false;$("listStatus").textContent="无法加载应用："+P.errorText(e);S.errors.unshift(e.message);recordError("App list: "+e.message)}finally{S.loading=false;updateBusy()}}
+function syncProgressVisibility(){
+ document.documentElement.dataset.progressPaused=String(document.hidden||S.page!=="apps");
 }
+function setProgress(value,total){
+ const progress=$("listProgress"),count=$("listCount"),active=value!==false;
+ progress.hidden=!active;progress.dataset.running=String(active);$("appList").setAttribute("aria-busy",String(active));
+ count.hidden=!active||!Number.isFinite(total)||total<=0||!Number.isFinite(value);
+ count.textContent=count.hidden?"":value+" / "+total;
+ // Indeterminate animation is independent of these real counts.
+ progress.removeAttribute("aria-valuenow");syncProgressVisibility();
+}
+document.addEventListener("visibilitychange",syncProgressVisibility);
+window.addEventListener("pagehide",()=>{document.documentElement.dataset.progressPaused="true"});
+window.addEventListener("pageshow",syncProgressVisibility);
 function visibleApps(){const q=$("search").value.trim().toLowerCase();return C.sortAppsByLocale(S.apps,S.configs.apps).filter(a=>(S.showSystem||!a.isSystem)&&(!q||(S.showNames&&a.appLabel.toLowerCase().includes(q))||a.packageName.toLowerCase().includes(q)))}
 function showListSummary(){if(S.loading||S.localeLoading)return;const count=visibleApps().length;$("listStatus").textContent="已加载 "+S.apps.length+" 个应用 · 当前显示 "+count+" 个"+(S.localeFailures?" · "+S.localeFailures+" 个语言设置无法读取":"")}
 let reorderFrame=null;
@@ -252,7 +265,7 @@ function setDetailSearch(active){
 }
 function installTapFeedback(){LSUI.bind()}
 function addNav(){
-LSUI.init({page:page=>{S.page=page;if(page!=="detail")setDetailSearch(false);if(page==="apps"&&initialized&&!S.apps.length&&!S.loading)void loadApps()},detail:pkg=>{const app=S.apps.find(x=>x.packageName===pkg)||S.selected;if(!app||app.packageName!==pkg)return false;renderDetail(app);return true},diagnostics:loadDiagnostics,error:e=>{recordError(e.message);announce(P.errorText(e))}});
+LSUI.init({page:page=>{S.page=page;syncProgressVisibility();if(page!=="detail")setDetailSearch(false);if(page==="apps"&&initialized&&!S.apps.length&&!S.loading)void loadApps()},detail:pkg=>{const app=S.apps.find(x=>x.packageName===pkg)||S.selected;if(!app||app.packageName!==pkg)return false;renderDetail(app);return true},diagnostics:loadDiagnostics,error:e=>{recordError(e.message);announce(P.errorText(e))}});
 $("refresh").onclick=async()=>{if(S.refreshing||busy||S.loading)return;S.refreshing=true;updateBusy();try{await loadConfig();if(S.page==="detail"&&S.selected)await refreshAppLocale(S.selected);else await loadApps()}finally{S.refreshing=false;updateBusy()}};
 $("copyLogs").onclick=copyLogs;
 $("wrapLogs").onclick=()=>{const wrap=$("wrapLogs").getAttribute("aria-pressed")!=="true";$("wrapLogs").setAttribute("aria-pressed",String(wrap));$("rawStatus").classList.toggle("wrap",wrap)};

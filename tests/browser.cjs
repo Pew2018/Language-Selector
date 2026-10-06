@@ -6,7 +6,8 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
  let browser;
  try{
   browser=await chromium.launch({headless:true,args:['--no-sandbox']});
-  const page=await browser.newPage({viewport:{width:412,height:860}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  if(process.env.LS_SCREENSHOT_DIR)fs.mkdirSync(process.env.LS_SCREENSHOT_DIR,{recursive:true});
+  const context=await browser.newContext({viewport:{width:412,height:860},...(process.env.LS_SCREENSHOT_DIR?{recordVideo:{dir:process.env.LS_SCREENSHOT_DIR,size:{width:412,height:860}}}:{})}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
    window.mockCommands=[];window.mockInfoCalls=0;window.mockIconCalls=0;window.mockLocale='';window.mockLocales={'com.example.music':'fr-FR','com.example.reader':'zh-CN'};window.mockConfig='schema=1\nauto=0\napp=com.example.reader|zh-Hans-CN\n';window.mockDelay=0;if(sessionStorage.getItem('mockConfig'))window.mockConfig=sessionStorage.getItem('mockConfig');if(sessionStorage.getItem('mockLocales'))window.mockLocales=JSON.parse(sessionStorage.getItem('mockLocales'));
    const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#42A5F5"/></svg>');
@@ -15,7 +16,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
     else if(cmd.includes('cmd package list packages'))out=cmd.includes(' -s')?'package:com.android.settings':cmd.includes(' -3')?'package:com.example.music\npackage:com.example.reader':'package:com.android.settings\npackage:com.example.music\npackage:com.example.reader';else if(cmd==='am get-current-user')out='0';else if(cmd==='getprop ro.build.version.sdk')out='36';else if(cmd.includes('cmd locale help'))out='available';else if(cmd.includes('list-device-locales'))out='en-US\nja-JP\nzh-Hans-CN\nzh-Hant-TW';else if(cmd.includes('get-app-locales')){const pkg=/get-app-locales '([^']+)'/.exec(cmd)?.[1]||'com.example.reader';if(window.mockReadFailure===pkg){code=1;err='Locale service read failed'}else out='Locales for '+pkg+' for user 0 are ['+(mockLocales[pkg]||'')+']'}else if(cmd.includes('getprop'))out='16\n36';
     sessionStorage.setItem('mockConfig',mockConfig);sessionStorage.setItem('mockLocales',JSON.stringify(mockLocales));setTimeout(()=>window[cb]?.(code,out,err),cmd.includes('get-app-locales')?(window.mockReadDelay||window.mockDelay||3):(window.mockDelay||3));
    }
-   window.ksu={listPackages:()=>JSON.stringify(['com.example.music','com.example.reader','com.android.settings']),getPackagesInfo:names=>(window.mockInfoCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,appLabel:({'com.example.reader':'阅读器','com.example.music':'Music Player','com.android.settings':'系统设置'})[packageName],isSystem:packageName.startsWith('com.android.')})))),getPackagesIcons:names=>(window.mockIconCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,icon})))),exec:execute,
+   window.ksu={listPackages:()=>window.mockNoNative?null:JSON.stringify(['com.example.music','com.example.reader','com.android.settings']),getPackagesInfo:names=>(window.mockInfoCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,appLabel:({'com.example.reader':'阅读器','com.example.music':'Music Player','com.android.settings':'系统设置'})[packageName],isSystem:packageName.startsWith('com.android.')})))),getPackagesIcons:names=>(window.mockIconCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,icon})))),exec:execute,
     spawn(command,args,options,name){const program=JSON.parse(args)[1],cmd=program.slice(1,-1).replaceAll(String.fromCharCode(39,34,39,34,39),String.fromCharCode(39)),callback=name+'_mock';const handler=window[name];window[callback]=(code,out,err)=>{if(out)handler.stdout.emit('data',out);if(err)handler.stderr.emit('data',err);handler.emit('exit',code);if(code)handler.emit('error',{message:err});delete window[callback]};execute(cmd,options,callback);}
    };
   });
@@ -25,6 +26,37 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.locator('.app-row').count(),2);await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.reader');
   assert.match(await page.locator('.app-row').first().locator('.locale-state').textContent(),/已生效：中文（简体，中国）/);
   await page.waitForFunction(()=>document.querySelector('.app-row .locale-state')?.textContent.includes('已生效'));
+  // Observe real CSS animation over a complete cycle; counts never drive its geometry.
+  await page.emulateMedia({reducedMotion:'no-preference'});
+  await page.evaluate(()=>{mockReadDelay=5000});
+  await page.click('#refresh');await page.waitForFunction(()=>document.getElementById('listCount').textContent==='0 / 3');
+  assert.equal(await page.getAttribute('#listProgress','aria-valuenow'),null);
+  assert.equal(await page.locator('#listCount').textContent(),'0 / 3');
+  assert.equal(await page.$eval('#listStatus',e=>getComputedStyle(e,'::before').content),'none');
+  const motion=await page.evaluate(async()=>{
+   const samples=[],start=performance.now();let previous=start,maxGap=0;
+   await new Promise(resolve=>{function frame(now){maxGap=Math.max(maxGap,now-previous);previous=now;const a=document.querySelector('.primary-bar'),b=document.querySelector('.secondary-bar');samples.push({t:now-start,primary:getComputedStyle(a).transform,secondary:getComputedStyle(b).transform,scale1:getComputedStyle(a.firstElementChild).transform,scale2:getComputedStyle(b.firstElementChild).transform});if(now-start<2200)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
+   return{samples,maxGap,source:'Headless Chromium animation observation; not device performance'};
+  });
+  assert.ok(new Set(motion.samples.map(s=>s.primary)).size>20);assert.ok(new Set(motion.samples.map(s=>s.scale1)).size>20);
+  assert.ok(new Set(motion.samples.map(s=>s.secondary)).size>20);assert.ok(new Set(motion.samples.map(s=>s.scale2)).size>20);
+  if(process.env.LS_SCREENSHOT_DIR){fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'progress-motion-observation.json'),JSON.stringify(motion,null,2));await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'progress-running.png')});}
+  await page.click('[data-page=settings]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'paused');
+  await page.click('[data-page=apps]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'running');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'paused');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'running');
+  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationName),'none');
+  assert.match(await page.locator('#listStatus').textContent(),/正在读取/);
+  await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>document.getElementById('listProgress').hidden);
+  assert.equal(await page.getAttribute('#appList','aria-busy'),'false');assert.equal(await page.locator('#listCount').isVisible(),false);
+  // A new refresh supersedes old reads. Unknown package counts remain absent.
+  await page.evaluate(()=>{mockReadDelay=600;mockNoNative=true;mockDelay=150});
+  await page.click('#refresh');await page.waitForFunction(()=>document.getElementById('listStatus').textContent.includes('正在加载'));
+  assert.equal(await page.locator('#listCount').isVisible(),false);assert.equal(await page.locator('#listProgress').isVisible(),true);
+  await page.waitForFunction(()=>document.getElementById('listStatus').textContent.includes('正在读取语言'));
+  await page.evaluate(()=>{mockReadDelay=0;mockNoNative=false;mockDelay=3});await page.click('#refresh');
+  await page.waitForFunction(()=>document.getElementById('listProgress').hidden);await page.waitForTimeout(700);
+  assert.match(await page.locator('#listStatus').textContent(),/当前显示/);
   await page.focus('#search');
   assert.equal(await page.$eval('#search',e=>getComputedStyle(e).outlineStyle),'none');
   if(process.env.LS_SCREENSHOT_DIR){fs.mkdirSync(process.env.LS_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'apps-light-focused.png')});}
@@ -36,13 +68,25 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.click('#back');await page.waitForSelector('#appearancePage:not(.hidden)');await page.click('#back');await page.waitForSelector('#settingsPage:not(.hidden)');
   assert.equal(await page.evaluate(()=>mockCommands.filter(c=>/control\.sh\x27 \x27(locale|auto|recover)\x27/.test(c)).length),initialWrites);
   await page.click('[data-page=apps]');await page.locator('.app-row').first().click();await page.waitForSelector('#detailPage:not(.hidden)');assert.equal(await page.locator('.bottom-nav').isVisible(),false);
+  await page.waitForFunction(()=>document.getElementById('detailState').textContent==='✓ 与配置一致');
+  assert.equal(await page.locator('#configuredLocaleGroup').isVisible(),false);
+  assert.equal(await page.locator('#currentLocaleGroup').isVisible(),true);
+  assert.equal(await page.$eval('#restoreDefault',e=>getComputedStyle(e).borderTopWidth),'0px');
+  if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'detail-consistent.png')});
   assert.match(await page.locator('#commonLocales').textContent(),/中文（简体，中国）/);assert.match(await page.locator('#commonLocales').textContent(),/中文（繁体，台湾）/);
   await page.locator('.locale-option').filter({hasText:'ja-JP'}).click();await page.waitForSelector('[role=dialog]');await page.keyboard.press('Escape');await page.waitForSelector('.dialog',{state:'detached'});assert.equal(await page.evaluate(()=>mockCommands.filter(c=>/control\.sh\x27 \x27locale\x27/.test(c)).length),0);
   await page.locator('.locale-option').filter({hasText:'ja-JP'}).click();await page.getByRole('button',{name:'应用',exact:true}).click();await page.waitForFunction(()=>mockCommands.some(c=>c.includes("control.sh' 'locale'")));await page.waitForFunction(()=>!document.getElementById('restoreDefault').disabled);assert.equal(await page.evaluate(()=>mockLocale),'ja-JP');
   const count=await page.evaluate(()=>mockCommands.filter(c=>/control\.sh\x27 \x27locale\x27/.test(c)).length);await page.goForward();await page.waitForTimeout(250);assert.equal(await page.evaluate(()=>mockCommands.filter(c=>/control\.sh\x27 \x27locale\x27/.test(c)).length),count);
   await page.click('#back');await page.waitForSelector('#appsPage:not(.hidden)');
   assert.equal(await page.locator('.app-row').first().getAttribute('data-package-name'),'com.example.reader');
-  await page.locator('.app-row').first().click();await page.click('#restoreDefault');await page.waitForFunction(()=>document.getElementById('restoreDefault').textContent.includes('当前跟随系统'));await page.click('#back');await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.music');
+  await page.locator('.app-row').first().click();await page.waitForFunction(()=>!document.getElementById('restoreDefault').disabled);
+  await page.evaluate(()=>{mockDelay=100});await page.click('#restoreDefault');
+  await page.waitForFunction(()=>document.getElementById('restoreDefault').textContent.includes('正在恢复'));
+  assert.equal(await page.locator('#restoreDefault').isDisabled(),true);
+  const restoringCount=await page.evaluate(()=>mockCommands.filter(c=>c.includes("control.sh' 'locale'")).length);
+  await page.evaluate(()=>document.getElementById('restoreDefault').click());
+  assert.equal(await page.evaluate(()=>mockCommands.filter(c=>c.includes("control.sh' 'locale'")).length),restoringCount);
+  await page.evaluate(()=>{mockDelay=3});await page.waitForSelector('#followSystemStatus:not([hidden])');await page.click('#back');await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.music');
   assert.equal(await page.locator('[data-app-group="configured"]').count(),0);
   await page.reload();await page.waitForSelector('html[data-loading="false"]');await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.music');
   await page.fill('#search','music');assert.equal(await page.locator('.app-row').count(),1);await page.click('#searchClear');assert.equal(await page.locator('.app-row').count(),2);
@@ -117,6 +161,8 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.waitForFunction(()=>document.querySelector('[data-package-name="com.example.reader"] .locale-state')?.dataset.status==='mismatch');
   await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForFunction(()=>document.getElementById('currentLocale').textContent.includes('英语'));
   assert.match(await page.locator('#configuredLocale').textContent(),/日语/);
+  assert.equal(await page.locator('#configuredLocaleGroup').isVisible(),true);assert.match(await page.locator('#detailState').textContent(),/不一致/);
+  if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'detail-mismatch.png')});
   assert.equal(await page.locator('[data-locale-tag="en-US"] .current-mark').count(),1);
   assert.equal(await page.locator('[data-locale-tag="ja-JP"] .configured-mark').count(),1);
   await page.focus('#localeSearch');assert.equal(await page.locator('#appHeader').isVisible(),false);
@@ -133,6 +179,10 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.locator('.current-mark').count(),0);
   await page.evaluate(()=>{mockReadFailure=null;mockWriteFailure=true});await page.click('#refresh');await page.waitForFunction(()=>!document.getElementById('restoreDefault').disabled);
   const beforeFail=await page.evaluate(()=>mockConfig);
+  await page.click('#restoreDefault');await page.waitForFunction(()=>document.getElementById('actionStatus').dataset.error==='true');
+  assert.equal(await page.evaluate(()=>mockConfig),beforeFail);assert.match(await page.locator('#currentLocale').textContent(),/英语/);
+  assert.equal(await page.locator('#followSystemStatus').isVisible(),false);
+  await page.evaluate(()=>sessionStorage.removeItem('mockPending'));await page.click('#refresh');await page.waitForFunction(()=>!document.getElementById('restoreDefault').disabled);
   await page.locator('[data-locale-tag="zh-Hans-CN"]').click();await page.getByRole('button',{name:'应用',exact:true}).click();
   await page.waitForFunction(()=>document.getElementById('actionStatus').dataset.error==='true');
   assert.equal(await page.evaluate(()=>mockConfig),beforeFail);
@@ -145,6 +195,15 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.click('#searchClear');await page.waitForFunction(()=>document.getElementById('listProgress').hidden);
   await page.evaluate(()=>{mockReadDelay=0;mockLocales['com.example.reader']='ja-JP'});
   await page.click('#refresh');await page.waitForFunction(()=>document.querySelector('[data-package-name="com.example.reader"] .locale-state')?.dataset.status==='verified');
+  // Multiple Android overrides retain order; configuration remains one validated code.
+  await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForFunction(()=>document.getElementById('detailState').textContent==='✓ 与配置一致');
+  await page.evaluate(()=>{mockReadDelay=300;mockLocales['com.example.reader']='ja-JP,en-US'});
+  await page.click('#refresh');await page.waitForFunction(()=>document.getElementById('detailState').textContent.includes('正在确认'));
+  assert.equal(await page.locator('#currentLocaleGroup').isVisible(),false);assert.equal(await page.locator('#configuredLocaleGroup').isVisible(),true);
+  await page.waitForFunction(()=>document.querySelectorAll('#currentLocale .language-value').length===2);
+  assert.match(await page.locator('#currentLocale').textContent(),/日语.*英语/s);assert.equal(await page.locator('.current-mark').count(),2);
+  assert.match(await page.locator('#detailState').textContent(),/不一致/);
+  await page.evaluate(()=>{mockReadDelay=0;mockLocales['com.example.reader']='ja-JP'});await page.click('#back');
   // Actual system keyboard and native APIs still require a device; this simulates only viewport height.
   // Reload must retain unfinished state; reconciliation performs no locale write.
   await page.evaluate(()=>sessionStorage.setItem('mockPending','true'));await page.reload();await page.waitForSelector('html[data-loading="false"]');
@@ -169,6 +228,6 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
   const targets=await page.locator('#restoreDefault,#localeSearchClear').evaluateAll(nodes=>nodes.map(e=>({width:e.getBoundingClientRect().width,height:e.getBoundingClientRect().height})));assert.ok(targets[0].height>=48); // CSS pixels only; real dp/zoom needs a device.
   if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'detail-large-text.png')});
-  assert.deepEqual(errors,[]);console.log('Browser smoke passed: themes, colors, 4 widths, navigation, dialogs, safe mutations, ripple and reduced motion.');
+  await context.close();assert.deepEqual(errors,[]);console.log('Browser smoke passed: themes, colors, 4 widths, navigation, dialogs, safe mutations, ripple and reduced motion.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

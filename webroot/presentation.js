@@ -5,14 +5,19 @@ function languageName(tag){
  if(fixed[tag])return fixed[tag];if(!C.validLocale(tag))return String(tag||"");
  try{const locale=new Intl.Locale(tag),base=new Intl.DisplayNames(["zh-CN"],{type:"language"}).of(locale.language);if(!base||base===locale.language)return tag;const extra=[];if(locale.script)extra.push(new Intl.DisplayNames(["zh-CN"],{type:"script"}).of(locale.script));if(locale.region)extra.push(new Intl.DisplayNames(["zh-CN"],{type:"region"}).of(locale.region));return extra.length?base+"（"+extra.join("，")+"）":base}catch(_){return tag}
 }
-function readingText(actual){if(!actual)return"正在读取语言设置…";if(!actual.ok)return"无法读取语言设置";return actual.followSystem?"跟随系统":languageName(actual.localeTag)}
+function actualTags(actual){return actual?.ok&&!actual.followSystem?(actual.localeTags||[actual.localeTag]).filter(C.validLocale):[]}
+function detailState(app,entry){
+ const actual=app.locale,known=actual?.ok===true,tags=actualTags(actual),matched=known&&!!entry&&(entry.followSystem?actual.followSystem:!actual.followSystem&&tags.length===1&&C.sameLocale(tags[0],entry.localeTag));
+ return{showCurrent:known,showConfigured:!!entry&&!matched,kind:matched?"verified":entry&&known?"mismatch":!known?"unknown":"current",text:matched?"✓ 与配置一致":entry&&known?"当前设置与配置不一致":!known?(app.checking?(entry?"正在确认是否生效…":"正在读取语言设置…"):"无法确认是否生效"):entry?"":"未在模块中配置"};
+}
+function readingText(actual){if(!actual)return"正在读取语言设置…";if(!actual.ok)return"无法读取语言设置";return actual.followSystem?"跟随系统":actualTags(actual).map(languageName).join("、")}
 function configuredState(app,settings){
  const target=C.moduleLocale(app,settings);
  if(!target)return{kind:!app.locale?"loading":!app.locale.ok?"unknown":"current",text:readingText(app.locale),note:"",configured:false};
  const saved="已配置："+languageName(target.localeTag);
  if(!app.locale)return{kind:app.checking?"checking":"saved",text:saved,note:app.checking?"正在确认是否生效…":"尚未确认是否生效",configured:true};
  if(!app.locale.ok)return{kind:"unknown",text:"无法确认是否生效",note:saved,configured:true};
- if(!app.locale.followSystem&&C.sameLocale(app.locale.localeTag,target.localeTag))return{kind:"verified",text:"已生效："+languageName(target.localeTag),note:"",configured:true};
+ if(!app.locale.followSystem&&actualTags(app.locale).length===1&&C.sameLocale(app.locale.localeTag,target.localeTag))return{kind:"verified",text:"已生效："+languageName(target.localeTag),note:"",configured:true};
  return{kind:"mismatch",text:"未生效 · 当前："+readingText(app.locale),note:saved,configured:true};
 }
 function errorText(error){
@@ -46,5 +51,5 @@ function bootResult(raw){
  else if(summary){title="开机应用未完成";message=errorText(summary);}
  return{title,message,finished:fields.finished||"",started:fields.started||"",success,failed,summary};
 }
-return{languageName,readingText,configuredState,errorText,bootResult};
+return{languageName,readingText,configuredState,detailState,actualTags,errorText,bootResult};
 });

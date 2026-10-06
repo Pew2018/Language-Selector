@@ -2,6 +2,8 @@
 
 The persistent state lives in `/data/adb/language_selector_ksu_data/`, outside the replaceable module directory.
 
+The legacy root-level config.v1 belongs exclusively to Android user 0. Other users use users/<id>/config.v1. All configuration updates go through control.sh under a shared kernel file lock; the backend rereads and validates the latest snapshot before merging one change. Invalid files are preserved and all writes fail closed. Files/directories must be root-owned private regular files/directories; symbolic links and extra hard links are rejected.
+
 `config.v1` is a deliberately simple, validated line format (not shell code):
 
 ```
@@ -15,7 +17,9 @@ app=com.example.chat|@system
 - Package names are restricted to ASCII package identifier characters.
 - Locale values are validated BCP-47 tags; `@system` means follow the system default.
 - Unknown, malformed, and future schema data fails closed. The startup script never sources or evaluates the file.
-- Save uses a temporary file, restrictive permissions, and atomic rename. The module installer does not remove this directory.
+- Save uses a unique temporary file, restrictive permissions, and atomic rename. The module installer does not remove this directory.
+
+An unfinished locale write is recorded in the user's pending.v1 journal. Diagnostics can explicitly reconcile the current Android language without repeating the original write. See security.md for details.
 
 ## WebUI requirements
 

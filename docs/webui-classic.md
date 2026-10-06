@@ -16,7 +16,7 @@ This independent module follows TurboIMS-Classic-WebUI-Design-Spec-v1.0, not its
 
 ## Boundaries
 
-The internal config.v1 format and boot scripts are unchanged. Appearance uses separate `ls.*` browser preferences and never writes root configuration. Locale writes are explicit, serialized and read back for the same Android user. The bridge prefers asynchronous spawn and retains callback-based exec for older hosts. Timeout does not cancel a root operation; uncertain results block further mutations until reload.
+The internal config.v1 format is unchanged; storage is now bound to each Android user. Appearance uses separate `language_selector.*` browser preferences, with legacy appearance-value fallback, and never writes root configuration. Locale writes go through the validated, locked control.sh backend. bridge.js prefers asynchronous spawn and retains callback-based exec for older hosts. Timeout does not prove cancellation; the persistent journal blocks further mutations across reload until explicit reconciliation.
 
 `colors.js` and `feedback.js` adapt the reference implementation from Pew2018/TurboIMS; `ui.js` contains independent routing and dialogs. Native status/navigation icon mode, keyboard and manager back gestures require physical-device validation.
 

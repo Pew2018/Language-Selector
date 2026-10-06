@@ -2,8 +2,8 @@
 (() => {
   'use strict';
   const $=id=>document.getElementById(id),root=document.documentElement;
-  const read=(key,fallback)=>{try{return localStorage.getItem('ls.'+key)||fallback;}catch(_){return fallback;}};
-  const write=(key,value)=>{try{localStorage.setItem('ls.'+key,String(value));}catch(_){}};
+  const read=(key,fallback)=>{try{return localStorage.getItem('language_selector.'+key)||localStorage.getItem('ls.'+key)||fallback;}catch(_){return fallback;}};
+  const write=(key,value)=>{try{localStorage.setItem('language_selector.'+key,String(value));}catch(_){}};
   const media=matchMedia('(prefers-color-scheme: dark)');
   const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
   const oneplus=[['OnePlus Blue','#42A5F5'],['Golden','#CC6F4E'],['Lemon Yellow','#E6A545'],['Grass Green','#7DC22F'],['Charm Purple','#9575CD'],['Sky Blue','#26C6DA'],['Vigour Red','#F06292'],['Fashion Pink','#BA68C8']];

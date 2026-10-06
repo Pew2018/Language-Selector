@@ -11,34 +11,40 @@ jobs:
   test-and-package:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
       - name: Validate JavaScript and configuration logic
         run: |
+          node --check webroot/bridge.js
           node --check webroot/core.js
           node --check webroot/app.js
           node --check webroot/ui.js
           node --check webroot/colors.js
           node --check webroot/feedback.js
           node --check webroot/startup.js
-          node --test tests/*.test.js
+          sudo "$(command -v node)" --test tests/*.test.js
       - name: Validate shell scripts and module metadata
         run: |
-          for f in customize.sh service.sh boot-completed.sh; do sh -n "$f"; done
+          for f in customize.sh service.sh boot-completed.sh security.sh control.sh uninstall.sh; do sh -n "$f"; done
           test -f module.prop
           grep -q '^id=language_selector_ksu$' module.prop
           test -f webroot/index.html
+      - name: Verify KernelSU BusyBox ash compatibility
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y busybox
+          sudo env LS_TEST_SHELL=/bin/busybox "$(command -v node)" --test tests/security.test.js
       - name: Install browser QA dependencies
         run: |
-          npm install --no-save --package-lock=false playwright@1.60.0
+          npm ci --ignore-scripts
           npx playwright install --with-deps chromium
       - name: Browser UI regression and screenshots
         env:
           LS_SCREENSHOT_DIR: ui-qa
         run: node tests/browser.cjs
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         if: always()
         with:
           name: language-selector-webui-qa
@@ -47,12 +53,21 @@ jobs:
       - name: Package KernelSU module
         run: |
           mkdir -p dist/module
-          cp -R module.prop customize.sh boot-completed.sh uninstall.sh webroot docs dist/module/
+          cp -R module.prop customize.sh boot-completed.sh uninstall.sh security.sh control.sh webroot docs dist/module/
           (cd dist/module && zip -qr ../module-check.zip .)
           unzip -t dist/module-check.zip
           unzip -l dist/module-check.zip
-      - uses: actions/upload-artifact@v4
+          sha256sum dist/module-check.zip > dist/module-check.zip.sha256
+          git rev-parse HEAD > dist/build-commit.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: language-selector-ksu-next-module
           path: dist/module/
           if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: language-selector-build-integrity
+          path: |
+            dist/module-check.zip
+            dist/module-check.zip.sha256
+            dist/build-commit.txt

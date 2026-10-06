@@ -9,7 +9,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   if(process.env.LS_SCREENSHOT_DIR)fs.mkdirSync(process.env.LS_SCREENSHOT_DIR,{recursive:true});
   const context=await browser.newContext({viewport:{width:412,height:860},...(process.env.LS_SCREENSHOT_DIR?{recordVideo:{dir:process.env.LS_SCREENSHOT_DIR,size:{width:412,height:860}}}:{})}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
-   window.mockCommands=[];window.mockInfoCalls=0;window.mockIconCalls=0;window.mockLocale='';window.mockLocales={'com.example.music':'fr-FR','com.example.reader':'zh-CN'};window.mockConfig='schema=1\nauto=0\napp=com.example.reader|zh-Hans-CN\n';window.mockDelay=0;if(sessionStorage.getItem('mockConfig'))window.mockConfig=sessionStorage.getItem('mockConfig');if(sessionStorage.getItem('mockLocales'))window.mockLocales=JSON.parse(sessionStorage.getItem('mockLocales'));
+   window.mockCommands=[];window.mockInfoCalls=0;window.mockIconCalls=0;window.mockLocale='';window.mockLocales={'com.example.music':'fr-FR','com.example.reader':'zh-CN'};window.mockConfig='schema=1\nauto=0\napp=com.example.reader|zh-Hans-CN\n';window.mockDelay=Number(sessionStorage.getItem('mockStartupDelay'))||0;if(sessionStorage.getItem('mockConfig'))window.mockConfig=sessionStorage.getItem('mockConfig');if(sessionStorage.getItem('mockLocales'))window.mockLocales=JSON.parse(sessionStorage.getItem('mockLocales'));
    const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#42A5F5"/></svg>');
    function execute(cmd,options,cb){window.mockCommands.push(cmd);let out='',code=0,err='';const op=/control\.sh' '(\w+)' '([0-9]+)'(?: '([^']*)')?(?: '([^']*)')?/.exec(cmd);
     if(op){const [,action,user,pkg,tag]=op;if(action==='locale'&&window.mockWriteFailure){sessionStorage.setItem('mockPending','true');code=1;err='Locale write failed; reconcile current state';sessionStorage.setItem('mockConfig',mockConfig);setTimeout(()=>window[cb]?.(code,out,err),3);return}if(!mockConfig.startsWith('schema=1')&&action!=='status'){code=1;err='Invalid configuration'}else if(action==='read')out=mockConfig;else if(action==='state')out=sessionStorage.getItem('mockPending')==='true'?'pending':'ready';else if(action==='status')out=window.mockBoot||'summary=boot apply disabled\nsuccess=0\nfailed=0\n';else if(action==='locale'){mockLocale=tag==='@system'?'':tag;mockLocales[pkg]=mockLocale;mockConfig=mockConfig.split('\n').filter(l=>!l.startsWith('app='+pkg+'|')).join('\n').trimEnd()+'\napp='+pkg+'|'+tag+'\n';out=mockConfig}else if(action==='auto'){mockConfig=mockConfig.replace(/^auto=[01]$/m,'auto='+pkg);out=mockConfig}else if(action==='recover'){sessionStorage.setItem('mockPending','false');out=mockConfig}}
@@ -26,16 +26,32 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.locator('.app-row').count(),2);await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.reader');
   assert.match(await page.locator('.app-row').first().locator('.locale-state').textContent(),/已生效：中文（简体，中国）/);
   await page.waitForFunction(()=>document.querySelector('.app-row .locale-state')?.textContent.includes('已生效'));
+  // Startup and list now use the same painted indeterminate component.
+  await page.evaluate(()=>sessionStorage.setItem('mockStartupDelay','500'));await page.reload();
+  await page.waitForSelector('#startupProgress',{state:'visible'});
+  assert.equal(await page.locator('#startupProgress .ls-progress__bar').count(),2);
+  assert.equal(await page.$eval('#loading',e=>getComputedStyle(e,'::after').content),'none');
+  await page.waitForTimeout(650);
+  const startupFrame1=await page.locator('#startupProgress').screenshot();
+  await page.waitForTimeout(250);
+  const startupFrame2=await page.locator('#startupProgress').screenshot();
+  assert.ok(!startupFrame1.equals(startupFrame2),'Startup progress must visibly paint different frames');
+  if(process.env.LS_SCREENSHOT_DIR){fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'startup-progress-frame-1.png'),startupFrame1);fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'startup-progress-frame-2.png'),startupFrame2);await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'startup-progress-running.png')});}
+  await page.evaluate(()=>{sessionStorage.removeItem('mockStartupDelay');mockDelay=3});
+  await page.waitForSelector('html[data-loading="false"]');
+  assert.equal(await page.locator('#startupProgress').isVisible(),false);
+  assert.equal(await page.$eval('#startupProgress .ls-progress__primary',e=>getComputedStyle(e).animationName),'none');
   // Observe real CSS animation over a complete cycle; counts never drive its geometry.
   await page.emulateMedia({reducedMotion:'no-preference'});
   await page.evaluate(()=>{mockReadDelay=5000});
   await page.click('#refresh');await page.waitForFunction(()=>document.getElementById('listCount').textContent==='0 / 3');
   assert.equal(await page.getAttribute('#listProgress','aria-valuenow'),null);
+  const loadGap=await page.evaluate(()=>{const text=document.querySelector('.load-caption').getBoundingClientRect(),bar=document.getElementById('listProgress').getBoundingClientRect();return bar.top-text.bottom});assert.ok(loadGap>=8&&loadGap<=12,loadGap);
   assert.equal(await page.locator('#listCount').textContent(),'0 / 3');
   assert.equal(await page.$eval('#listStatus',e=>getComputedStyle(e,'::before').content),'none');
   const motion=await page.evaluate(async()=>{
    const samples=[],start=performance.now();let previous=start,maxGap=0;
-   await new Promise(resolve=>{function frame(now){maxGap=Math.max(maxGap,now-previous);previous=now;const a=document.querySelector('.primary-bar'),b=document.querySelector('.secondary-bar');samples.push({t:now-start,primary:getComputedStyle(a).transform,secondary:getComputedStyle(b).transform,scale1:getComputedStyle(a.firstElementChild).transform,scale2:getComputedStyle(b.firstElementChild).transform});if(now-start<2200)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
+   await new Promise(resolve=>{function frame(now){maxGap=Math.max(maxGap,now-previous);previous=now;const a=document.querySelector('#listProgress .ls-progress__primary'),b=document.querySelector('#listProgress .ls-progress__secondary');samples.push({t:now-start,primary:getComputedStyle(a).transform,secondary:getComputedStyle(b).transform,scale1:getComputedStyle(a.firstElementChild).transform,scale2:getComputedStyle(b.firstElementChild).transform});if(now-start<2200)requestAnimationFrame(frame);else resolve()}requestAnimationFrame(frame)});
    return{samples,maxGap,source:'Headless Chromium animation observation; not device performance'};
   });
   assert.ok(new Set(motion.samples.map(s=>s.primary)).size>20);assert.ok(new Set(motion.samples.map(s=>s.scale1)).size>20);
@@ -44,18 +60,28 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   // clipped track at the cycle boundary, so restart never jumps mid-track.
   const cycleBoundary=await page.evaluate(()=>{
    const track=document.getElementById('listProgress'),animations=track.getAnimations({subtree:true}),rect=track.getBoundingClientRect();
-   const sample=time=>{animations.forEach(a=>{a.pause();a.currentTime=time});return [...track.querySelectorAll('.bar-inner')].map(e=>{const r=e.getBoundingClientRect();return{left:r.left,right:r.right}})};
+   const sample=time=>{animations.forEach(a=>{a.pause();a.currentTime=time});return [...track.querySelectorAll('.ls-progress__segment')].map(e=>{const r=e.getBoundingClientRect();return{left:r.left,right:r.right}})};
    const initial=sample(0),end=sample(1999);animations.forEach(a=>{a.currentTime=0;a.play()});return{initial,end,left:rect.left,right:rect.right};
   });
   assert.ok(cycleBoundary.initial.every(r=>r.right<=cycleBoundary.left+1));
   assert.ok(cycleBoundary.end.every(r=>r.left>=cycleBoundary.right-1));
   motion.cycleBoundary=cycleBoundary;
-  if(process.env.LS_SCREENSHOT_DIR){fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'progress-motion-observation.json'),JSON.stringify(motion,null,2));await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'progress-running.png')});}
-  await page.click('[data-page=settings]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'paused');
-  await page.click('[data-page=apps]');assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'running');
-  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'paused');
-  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationPlayState),'running');
-  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.$eval('.primary-bar',e=>getComputedStyle(e).animationName),'none');
+  // Observe painted pixels, not just transforms. Do not capture at an empty loop boundary.
+  await page.waitForTimeout(650);
+  const painted=await page.evaluate(()=>{
+   const host=document.getElementById('listProgress'),track=host.getBoundingClientRect();
+   return [...host.querySelectorAll('.ls-progress__segment')].map(e=>{const r=e.getBoundingClientRect(),style=getComputedStyle(e),left=Math.max(r.left,track.left),right=Math.min(r.right,track.right),height=Math.min(r.bottom,track.bottom)-Math.max(r.top,track.top);return{visible:right>left&&height>0,left,right,height,color:style.backgroundColor,trackColor:getComputedStyle(host).backgroundColor}});
+  });
+  assert.ok(painted.some(s=>s.visible&&s.color!==s.trackColor&&s.color!=='rgba(0, 0, 0, 0)'));
+  const listFrame1=await page.locator('#listProgress').screenshot();await page.waitForTimeout(250);
+  const listFrame2=await page.locator('#listProgress').screenshot();assert.ok(!listFrame1.equals(listFrame2),'List progress must visibly paint different frames');
+  motion.paintedSegments=painted;
+  if(process.env.LS_SCREENSHOT_DIR){fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'progress-motion-observation.json'),JSON.stringify(motion,null,2));fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'list-progress-frame-1.png'),listFrame1);fs.writeFileSync(path.join(process.env.LS_SCREENSHOT_DIR,'list-progress-frame-2.png'),listFrame2);await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'progress-running.png')});}
+  await page.click('[data-page=settings]');assert.equal(await page.$eval('#listProgress .ls-progress__primary',e=>getComputedStyle(e).animationPlayState),'paused');
+  await page.click('[data-page=apps]');assert.equal(await page.$eval('#listProgress .ls-progress__primary',e=>getComputedStyle(e).animationPlayState),'running');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pagehide')));assert.equal(await page.$eval('#listProgress .ls-progress__primary',e=>getComputedStyle(e).animationPlayState),'paused');
+  await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));assert.equal(await page.$eval('#listProgress .ls-progress__primary',e=>getComputedStyle(e).animationPlayState),'running');
+  await page.emulateMedia({reducedMotion:'reduce'});assert.equal(await page.$eval('#listProgress .ls-progress__primary',e=>getComputedStyle(e).animationName),'none');
   assert.match(await page.locator('#listStatus').textContent(),/正在读取/);
   await page.emulateMedia({reducedMotion:'no-preference'});await page.waitForFunction(()=>document.getElementById('listProgress').hidden);
   assert.equal(await page.getAttribute('#appList','aria-busy'),'false');assert.equal(await page.locator('#listCount').isVisible(),false);

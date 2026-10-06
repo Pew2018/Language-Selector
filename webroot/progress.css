@@ -1,0 +1,43 @@
+/* MDC Web v14.0.0 linear-progress timing/geometry adapted without its framework.
+ * Copyright 2017 Google Inc. MIT license: docs/material-progress-LICENSE.txt.
+ * Shared by startup and application-list loading; all animation uses transforms. */
+.ls-linear-progress{position:relative;display:block;overflow:hidden;width:100%;height:4px;margin:0;border:0;border-radius:0;box-shadow:none;background:var(--action-tonal,var(--track,rgba(66,165,245,.18)));background:color-mix(in srgb,var(--control-accent,var(--accent,#42a5f5)) 18%,var(--surface))}
+html[data-theme=dark] .ls-linear-progress{background:color-mix(in srgb,var(--control-accent,var(--accent,#42a5f5)) 28%,var(--surface))}
+.ls-progress__bar,.ls-progress__segment{position:absolute;inset:0;width:100%;height:100%;transform-origin:top left}
+.ls-progress__segment{background:var(--control-accent,var(--accent,#42a5f5));transform-origin:center}
+.ls-progress__primary{left:-145.166611%;animation:ls-primary-translate 2s infinite linear}
+.ls-progress__primary>.ls-progress__segment{animation:ls-primary-scale 2s infinite linear}
+.ls-progress__secondary{left:-54.888891%;animation:ls-secondary-translate 2s infinite linear}
+.ls-progress__secondary>.ls-progress__segment{animation:ls-secondary-scale 2s infinite linear}
+.ls-linear-progress[hidden]{display:none}
+.ls-linear-progress[data-running=false] .ls-progress__bar,.ls-linear-progress[data-running=false] .ls-progress__segment,
+html[data-progress-paused=true] .ls-progress__bar,html[data-progress-paused=true] .ls-progress__segment{animation-play-state:paused}
+@keyframes ls-primary-translate{
+ 0%{transform:translateX(0)}
+ 20%{transform:translateX(0);animation-timing-function:cubic-bezier(.5,0,.701732,.495819)}
+ 59.15%{transform:translateX(83.67142%);animation-timing-function:cubic-bezier(.302435,.381352,.55,.956352)}
+ 100%{transform:translateX(200.611057%)}
+}
+@keyframes ls-primary-scale{
+ 0%{transform:scaleX(.08)}
+ 36.65%{transform:scaleX(.08);animation-timing-function:cubic-bezier(.334731,.12482,.785844,1)}
+ 69.15%{transform:scaleX(.661479);animation-timing-function:cubic-bezier(.06,.11,.6,1)}
+ 100%{transform:scaleX(.08)}
+}
+@keyframes ls-secondary-translate{
+ 0%{transform:translateX(0);animation-timing-function:cubic-bezier(.15,0,.515058,.409685)}
+ 25%{transform:translateX(37.651913%);animation-timing-function:cubic-bezier(.31033,.284058,.8,.733712)}
+ 48.35%{transform:translateX(84.386165%);animation-timing-function:cubic-bezier(.4,.627035,.6,.902026)}
+ 100%{transform:translateX(160.277782%)}
+}
+@keyframes ls-secondary-scale{
+ 0%{transform:scaleX(.08);animation-timing-function:cubic-bezier(.205028,.057051,.57661,.453971)}
+ 19.15%{transform:scaleX(.457104);animation-timing-function:cubic-bezier(.152313,.196432,.648374,1.004315)}
+ 44.15%{transform:scaleX(.72796);animation-timing-function:cubic-bezier(.257759,-.003163,.211762,1.38179)}
+ 100%{transform:scaleX(.08)}
+}
+@media(prefers-reduced-motion:reduce){
+ .ls-progress__bar,.ls-progress__segment{animation:none!important}
+ .ls-progress__primary{left:0;transform:none}.ls-progress__primary>.ls-progress__segment{transform:scaleX(.3);transform-origin:left}
+ .ls-progress__secondary{display:none}
+}

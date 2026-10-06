@@ -1,6 +1,6 @@
 Material Components for the Web v14.0.0
 Source: https://github.com/material-components/material-components-web/tree/v14.0.0/packages/mdc-linear-progress
-The translate/scale keyframes and initial bar offsets in webroot/classic.css are adapted from _keyframes.scss and _mixins.scss.
+The translate/scale keyframes and initial bar offsets in webroot/progress.css are adapted from _keyframes.scss and _mixins.scss.
 
 Copyright 2017 Google Inc.
 

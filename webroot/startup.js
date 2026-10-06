@@ -7,7 +7,7 @@
     root.dataset.cardGroups=String((localStorage.getItem('language_selector.cards')||localStorage.getItem('ls.cards'))==='true');
   } catch (_) {}
   window.LSReady=()=>{root.dataset.loading='false';window.LSInitialized=true;};
-  setTimeout(()=>{if(window.LSInitialized)return;const host=document.getElementById('loading');if(!host)return;host.textContent='WebUI 初始化失败，请重新加载。';const retry=document.createElement('button');retry.type='button';retry.className='text-action';retry.textContent='重新加载';retry.onclick=()=>location.reload();host.append(retry);window.TouchFeedback?.bind(host);},10000);
+  setTimeout(()=>{if(window.LSInitialized)return;const host=document.getElementById('loading');if(!host)return;const indicator=document.getElementById('startupProgress');if(indicator)indicator.hidden=true;const status=document.getElementById('startupStatus');if(!status)return;status.textContent='WebUI 初始化失败，请重新加载。';const retry=document.createElement('button');retry.type='button';retry.className='text-action';retry.textContent='重新加载';retry.onclick=()=>location.reload();host.append(retry);window.TouchFeedback?.bind(host);},10000);
   addEventListener('error',()=>{window.LSStartupError=true;});
   addEventListener('unhandledrejection',()=>{window.LSStartupError=true;});
 })();

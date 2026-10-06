@@ -18,3 +18,15 @@ test('all UI assets local, custom dialogs and two real primary tabs',()=>{
  assert.match(js,/history\.replaceState/);assert.match(js,/history\.pushState/);assert.match(js,/aria-modal/);assert.match(js,/role','radiogroup/);
  assert.match(feedback,/WeakSet/);assert.match(feedback,/WeakMap/);assert.match(feedback,/pointercancel/);assert.match(feedback,/Math\.abs\(scroll-tap\.scroll\)>2/);assert.match(feedback,/radius\*2/);assert.doesNotMatch(feedback,/preventDefault|setPointerCapture/);
 });
+
+test('startup and list share a local square-ended MDC indeterminate component',()=>{
+ const html=fs.readFileSync('webroot/index.html','utf8'),css=fs.readFileSync('webroot/progress.css','utf8'),classic=fs.readFileSync('webroot/classic.css','utf8');
+ assert.match(html,/href="progress[.]css[?]v=0[.]1[.]5"/);
+ assert.equal((html.match(/class="ls-progress__bar ls-progress__primary"/g)||[]).length,2);
+ assert.equal((html.match(/class="ls-progress__bar ls-progress__secondary"/g)||[]).length,2);
+ assert.doesNotMatch(html,/<progress\b/);
+ assert.match(css,/height:4px/);assert.match(css,/transform-origin:center/);assert.match(css,/2s infinite linear/);
+ assert.match(css,/prefers-reduced-motion/);assert.match(classic,/#loading:after\{content:none\}/);
+ assert.doesNotMatch(css,/linear-gradient|setInterval/);
+ assert.match(css,/cubic-bezier\([.]152313,[.]196432,[.]648374,1[.]004315\)/);
+});

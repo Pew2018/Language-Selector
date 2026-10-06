@@ -19,6 +19,7 @@ jobs:
         run: |
           node --check webroot/bridge.js
           node --check webroot/core.js
+          node --check webroot/presentation.js
           node --check webroot/app.js
           node --check webroot/ui.js
           node --check webroot/colors.js

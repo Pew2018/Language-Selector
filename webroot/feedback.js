@@ -39,6 +39,7 @@
       if (Math.hypot(event.clientX-tap.x,event.clientY-tap.y)>slop ||
           Math.abs(scroll-tap.scroll)>2 ||
           matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      surface.querySelectorAll(".tap-ripple").forEach(node=>node.remove());
       const rect = surface.getBoundingClientRect();
       const x=event.clientX-rect.left,y=event.clientY-rect.top;
       const radius=Math.hypot(Math.max(x,rect.width-x),Math.max(y,rect.height-y));
@@ -58,7 +59,7 @@
     },{passive:true});
   }
   function bind(root=document) {
-    const selector=".app-row,.locale-option,.nav-button,.switch,.icon-button,.primary,.secondary,.dialog-button,.switch-hit,.text-action,.choice,.option,.swatch-item,.sim-edit-row,.feature-reset,.action-button,.dialog-cancel,.back,[data-ripple='control']";
+    const selector=".nav-button,.switch,.icon-button,.primary,.secondary,.dialog-button,.switch-hit,.text-action,.choice,.option,.swatch-item,.sim-edit-row,.feature-reset,.action-button,.dialog-cancel,.back,[data-ripple='control']";
     if (root.matches?.(selector)) bindRipple(root);
     root.querySelectorAll?.(selector).forEach(bindRipple);
   }

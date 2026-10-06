@@ -18,3 +18,24 @@ textarea{margin-top:12px;border:0;border-bottom:1px solid var(--secondary);borde
 button:focus-visible,input:focus-visible,textarea:focus-visible,summary:focus-visible,pre:focus-visible{outline:2px solid var(--control-accent-strong);outline-offset:2px}[hidden]{display:none!important}#toast{position:fixed;bottom:calc(72px + var(--inset-bottom));left:50%;transform:translateX(-50%);max-width:calc(100% - 32px);padding:10px 16px;background:#323232;color:#fff;border-radius:2px;opacity:0;pointer-events:none;z-index:12;font-size:13px;transition:opacity 160ms ease}#toast.show{opacity:1}
 #loading{max-width:620px;margin:auto;padding:24px;color:var(--secondary);font-size:13px}#loading:after{content:"";display:block;width:64px;height:2px;background:var(--control-accent);opacity:.45;margin-top:12px}html[data-loading=true] .content,html[data-loading=true] .bottom-nav{display:none}html[data-loading=false] #loading{display:none}html[data-edge-to-edge=true] body:before,html[data-edge-to-edge=true] body:after{content:"";position:fixed;left:0;right:0;z-index:4;pointer-events:none}html[data-edge-to-edge=true] body:before{top:0;height:var(--inset-top);background:var(--system-status-bg)}html[data-edge-to-edge=true] body:after{bottom:0;height:var(--inset-bottom);background:var(--toolbar)}
 @media(max-width:349px){:root{--pad:18px}.choice{max-width:43%}.dialog-scrim{padding:16px}.dialog{padding-left:17px;padding-right:17px}}@media(max-width:309px){.action-row{flex-direction:column;align-items:flex-start}}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important;scroll-behavior:auto!important}}
+
+/* Material filled text fields: persistent label and a single activation indicator. */
+.search{display:flex;align-items:center;height:56px;min-height:56px;gap:12px;padding:0 0 0 12px;margin:12px 0 8px;border:0;border-bottom:1px solid var(--secondary);border-radius:4px 4px 0 0;background:rgba(0,0,0,.045);box-shadow:none}
+html[data-theme=dark] .search{background:rgba(255,255,255,.07)}
+.search:focus-within{border-color:var(--control-accent-strong);box-shadow:0 1px var(--control-accent-strong)}
+.search-icon{width:24px;height:24px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;color:var(--secondary)}
+.search-copy{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;padding:7px 0 5px}
+.search-label{font-size:12px;line-height:16px;color:var(--secondary)}
+.search:focus-within .search-label{color:var(--accent-ink)}
+.search input{width:100%;min-height:24px;height:24px;padding:0;margin:0;border:0;background:transparent;font:400 16px/24px Roboto,"Noto Sans",system-ui,sans-serif;box-shadow:none;color:var(--text);caret-color:var(--control-accent-strong);-webkit-appearance:none;appearance:none}
+.search input:focus,.search input:focus-visible{outline:none;box-shadow:none}
+.search input::-webkit-search-cancel-button,.search input::-webkit-search-decoration{display:none}
+.search input::placeholder{color:var(--secondary);opacity:1}
+.search-clear{flex:none;width:48px;height:48px;color:var(--secondary);margin:0!important}
+.app-copy{min-width:0;flex:1}
+.module-setting{display:flex;align-items:baseline;gap:6px;color:var(--accent-ink);font-size:12px;line-height:1.5;margin-top:6px;overflow-wrap:anywhere}
+.module-setting:before{content:"✓";font-weight:600;flex:none}
+.module-configured .app-name{font-weight:500}
+.locale-state{font-size:12px;line-height:1.5;color:var(--secondary);margin-top:3px;overflow-wrap:anywhere}
+.module-configured{border-bottom:1px solid var(--divider)}
+.statusbox{font-size:13px;line-height:1.65}

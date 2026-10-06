@@ -22,14 +22,16 @@ function packageNamesFromBridge(bridge){
 }
 function packageNamesFromPm(output){return cleanPackages(String(output||"").split(/\r?\n/).map(line=>line.trim().replace(/^package:/,"")))}
 function cleanPackages(values){return [...new Set(values.filter(validPackage))]}
-// Stable grouping from actual Android state. Saved preferences alone do not
-// prove that an app currently has a dedicated language.
+// Module preferences lead immediately, even while Android state is loading.
+// Current Android state is tracked separately; a preference is not proof of application.
 function hasDedicatedLocale(app){return app.locale?.ok===true&&app.locale.followSystem===false&&typeof app.locale.localeTag==='string'&&app.locale.localeTag.trim()!==''}
-function sortAppsByLocale(apps){return [...apps.filter(hasDedicatedLocale),...apps.filter(app=>!hasDedicatedLocale(app))]}
+function moduleLocale(app,settings=[]){return settings.find(entry=>entry.packageName===app.packageName&&entry.followSystem===false&&validLocale(entry.localeTag))||null}
+function sortAppsByLocale(apps,settings=[]){const saved=new Set(settings.filter(entry=>entry.followSystem===false&&validLocale(entry.localeTag)).map(entry=>entry.packageName));const rank=app=>saved.has(app.packageName)?0:hasDedicatedLocale(app)?1:2;return [0,1,2].flatMap(group=>apps.filter(app=>rank(app)===group))}
+function sameLocale(a,b){if(!validLocale(a)||!validLocale(b))return false;try{return new Intl.Locale(a).maximize().toString()===new Intl.Locale(b).maximize().toString()}catch(_){return a.toLowerCase()===b.toLowerCase()}}
 function commonLocales(catalog){
 const chinese=[['zh-CN','zh-Hans-CN','zh-Hans'],['zh-TW','zh-Hant-TW','zh-Hant']];
 const resolveChinese=aliases=>aliases.find(tag=>catalog.includes(tag))||aliases[0];
 return ['en-US',resolveChinese(chinese[0]),resolveChinese(chinese[1]),'ja-JP','ko-KR','fr-FR','de-DE','es-ES','pt-BR'].filter(tag=>tag.startsWith('zh-')||catalog.includes(tag));
 }
-return{validPackage,validUserId,validLocale,normalizeConfig,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,hasDedicatedLocale,sortAppsByLocale,commonLocales}
+return{validPackage,validUserId,validLocale,normalizeConfig,toInternal,parseInternal,shellQuote,parseLocaleOutput,parseDeviceLocales,packageNamesFromBridge,packageNamesFromPm,hasDedicatedLocale,moduleLocale,sortAppsByLocale,sameLocale,commonLocales}
 });

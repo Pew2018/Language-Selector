@@ -105,8 +105,8 @@
     $('hexInput').oninput=()=>{const input=$('hexInput'),position=input.selectionStart;let value=input.value.toUpperCase().replace(/[^0-9A-F]/g,'').slice(0,6);input.value='#'+value;input.setSelectionRange(Math.min(position,input.value.length),Math.min(position,input.value.length));const valid=value.length===6;input.setAttribute('aria-invalid',String(!valid));$('hexError').textContent=valid?'':'请输入 6 位 HEX 颜色值';if(valid){seed=input.value;write('accent',seed);appearance();}};
     media.addEventListener('change',appearance);
     if(location.hostname==='mui.kernelsu.org'&&window.ksu?.enableInsets){const link=document.createElement('link');link.rel='stylesheet';link.href='/internal/insets.css';document.head.append(link);root.dataset.edgeToEdge='true';}
-    const viewport=()=>{if(document.activeElement?.matches('input,textarea')){root.style.setProperty('--app-viewport-height',Math.max(180,window.visualViewport?.height||innerHeight)+'px');document.activeElement.scrollIntoView({block:'nearest'});}else root.style.removeProperty('--app-viewport-height');};
-    window.visualViewport?.addEventListener('resize',viewport);window.visualViewport?.addEventListener('scroll',viewport);addEventListener('resize',viewport);document.addEventListener('focusin',viewport);document.addEventListener('focusout',()=>setTimeout(viewport,0));
+    const viewport=()=>{if(document.activeElement?.matches('input,textarea')){root.style.setProperty('--app-viewport-height',Math.max(180,window.visualViewport?.height||innerHeight)+'px');requestAnimationFrame(()=>{if(document.activeElement?.matches('input,textarea'))document.activeElement.scrollIntoView({block:'nearest'});});}else root.style.removeProperty('--app-viewport-height');};
+    window.visualViewport?.addEventListener('resize',viewport);addEventListener('resize',viewport);document.addEventListener('focusin',viewport);document.addEventListener('focusout',()=>setTimeout(viewport,0));
     appearance();render('apps');window.TouchFeedback.bind();
   }
   window.LSUI={init,navigate,showDialog,appearance,bind:()=>window.TouchFeedback.bind()};

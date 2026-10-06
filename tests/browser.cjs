@@ -183,8 +183,10 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.evaluate(()=>mockConfig),beforeFail);assert.match(await page.locator('#currentLocale').textContent(),/英语/);
   assert.equal(await page.locator('#followSystemStatus').isVisible(),false);
   await page.evaluate(()=>sessionStorage.removeItem('mockPending'));await page.click('#refresh');await page.waitForFunction(()=>!document.getElementById('restoreDefault').disabled);
+  const failedWriteStart=await page.evaluate(()=>mockCommands.filter(c=>c.includes("control.sh' 'locale'")).length);
   await page.locator('[data-locale-tag="zh-Hans-CN"]').click();await page.getByRole('button',{name:'应用',exact:true}).click();
-  await page.waitForFunction(()=>document.getElementById('actionStatus').dataset.error==='true');
+  await page.waitForFunction(start=>mockCommands.filter(c=>c.includes("control.sh' 'locale'")).length>start,failedWriteStart);
+  await page.waitForFunction(()=>document.getElementById('actionStatus').dataset.error==='true'&&document.querySelector('.locale-option').disabled);
   assert.equal(await page.evaluate(()=>mockConfig),beforeFail);
   assert.match(await page.locator('#currentLocale').textContent(),/英语/);
   assert.doesNotMatch(await page.locator('#detailState').textContent(),/已生效/);

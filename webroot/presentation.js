@@ -6,8 +6,9 @@ function languageName(tag){
  try{const locale=new Intl.Locale(tag),base=new Intl.DisplayNames(["zh-CN"],{type:"language"}).of(locale.language);if(!base||base===locale.language)return tag;const extra=[];if(locale.script)extra.push(new Intl.DisplayNames(["zh-CN"],{type:"script"}).of(locale.script));if(locale.region)extra.push(new Intl.DisplayNames(["zh-CN"],{type:"region"}).of(locale.region));return extra.length?base+"（"+extra.join("，")+"）":base}catch(_){return tag}
 }
 function actualTags(actual){return actual?.ok&&!actual.followSystem?(actual.localeTags||[actual.localeTag]).filter(C.validLocale):[]}
-function detailState(app,entry){
- const actual=app.locale,known=actual?.ok===true,tags=actualTags(actual),matched=known&&!!entry&&(entry.followSystem?actual.followSystem:!actual.followSystem&&tags.length===1&&C.sameLocale(tags[0],entry.localeTag));
+function detailState(app,entry,configKnown=true){
+ const actual=app.locale,known=actual?.ok===true,tags=actualTags(actual),matched=configKnown&&known&&!!entry&&(entry.followSystem?actual.followSystem:!actual.followSystem&&tags.length===1&&C.sameLocale(tags[0],entry.localeTag));
+ if(!configKnown)return{showCurrent:known,showConfigured:false,kind:"unknown",text:known?"无法确认已配置语言":app.checking?"正在读取语言设置…":"无法确认是否生效"};
  return{showCurrent:known,showConfigured:!!entry&&!matched,kind:matched?"verified":entry&&known?"mismatch":!known?"unknown":"current",text:matched?"✓ 与配置一致":entry&&known?"当前设置与配置不一致":!known?(app.checking?(entry?"正在确认是否生效…":"正在读取语言设置…"):"无法确认是否生效"):entry?"":"未在模块中配置"};
 }
 function readingText(actual){if(!actual)return"正在读取语言设置…";if(!actual.ok)return"无法读取语言设置";return actual.followSystem?"跟随系统":actualTags(actual).map(languageName).join("、")}

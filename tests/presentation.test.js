@@ -32,6 +32,7 @@ test('user errors are Chinese while the original error remains untouched',()=>{
 
 test('compact details preserve saved/current distinction and all Android override languages',()=>{
  const target=saved[0],actual={ok:true,followSystem:false,localeTag:'zh-CN'};
+ assert.equal(P.detailState(app(actual),target,false).text,'无法确认已配置语言');
  let d=P.detailState(app(actual),target);assert.equal(d.showConfigured,false);assert.equal(d.text,'✓ 与配置一致');
  d=P.detailState(app({ok:true,followSystem:false,localeTag:'en-US'}),target);assert.equal(d.showCurrent,true);assert.equal(d.showConfigured,true);assert.equal(d.kind,'mismatch');
  d=P.detailState({...app(null),checking:true},target);assert.equal(d.showCurrent,false);assert.equal(d.showConfigured,true);assert.match(d.text,/正在确认/);

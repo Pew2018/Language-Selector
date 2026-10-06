@@ -47,10 +47,10 @@ function languageValue(host,tags,followSystem=false){
 function syncDetailState(app){
  if(S.selected!==app)return;
  const actual=app.locale,entry=S.configs.apps.find(x=>x.packageName===app.packageName);
- const state=P.detailState(app,entry);
+ const state=P.detailState(app,entry,S.configValid);
  $("currentLocaleGroup").hidden=!state.showCurrent;$("configuredLocaleGroup").hidden=!state.showConfigured;
- if(state.showCurrent)languageValue($("currentLocale"),P.actualTags(actual),actual.followSystem);
- if(state.showConfigured)languageValue($("configuredLocale"),entry.localeTag,entry.followSystem);
+ if(state.showCurrent)languageValue($("currentLocale"),P.actualTags(actual),actual.followSystem);else $("currentLocale").replaceChildren();
+ if(state.showConfigured)languageValue($("configuredLocale"),entry.localeTag,entry.followSystem);else $("configuredLocale").replaceChildren();
  $("detailState").textContent=state.text;$("detailState").hidden=!state.text;$("detailState").dataset.status=state.kind;
  const following=actual?.ok&&actual.followSystem;
  $("followSystemStatus").hidden=!following||S.restoring===app;$("restoreDefault").hidden=!!following&&S.restoring!==app;

@@ -193,7 +193,9 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.evaluate(()=>{mockReadDelay=300});await page.click('#refresh');await page.waitForSelector('.app-row');
   await page.fill('#search','reader');assert.equal(await page.locator('.app-row').count(),1);assert.equal(await page.locator('[data-app-group="configured"]').textContent(),'已配置 · 1');
   await page.click('#searchClear');await page.waitForFunction(()=>document.getElementById('listProgress').hidden);
-  await page.evaluate(()=>{mockReadDelay=0;mockLocales['com.example.reader']='ja-JP'});
+  await page.evaluate(()=>{mockReadDelay=0;mockReadFailure='com.example.reader'});await page.click('#refresh');
+  await page.waitForFunction(()=>document.getElementById('listProgress').hidden);assert.match(await page.locator('#listStatus').textContent(),/1 个语言设置无法读取/);
+  await page.evaluate(()=>{mockReadFailure=null;mockReadDelay=0;mockLocales['com.example.reader']='ja-JP'});
   await page.click('#refresh');await page.waitForFunction(()=>document.querySelector('[data-package-name="com.example.reader"] .locale-state')?.dataset.status==='verified');
   // Multiple Android overrides retain order; configuration remains one validated code.
   await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForFunction(()=>document.getElementById('detailState').textContent==='✓ 与配置一致');

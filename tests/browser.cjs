@@ -75,6 +75,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   assert.equal(await page.locator('.app-row').first().isDisabled(),true);
   await page.click('[data-page=settings]');await page.click('#diagnosticsLink');await page.click('#recoverOperation');await page.getByRole('button',{name:'核对',exact:true}).click();await page.waitForSelector('#recoverOperation',{state:'hidden'});
   assert.equal(await page.evaluate(()=>mockCommands.filter(c=>c.includes("control.sh' 'locale'")).length),0);
+  await page.waitForFunction(()=>!document.getElementById('autoSwitch').disabled);
   // Damaged configuration remains read-only and is never silently overwritten.
   await page.evaluate(()=>sessionStorage.setItem('mockConfig','schema=99\\nauto=1\\n'));await page.reload();await page.waitForSelector('html[data-loading="false"]');
   await page.locator('.app-row').first().click();await page.waitForSelector('#detailPage:not(.hidden)');

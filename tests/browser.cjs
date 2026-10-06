@@ -52,7 +52,8 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.reload();await page.waitForSelector('html[data-loading="false"]');await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.reader');
   await page.evaluate(()=>{localStorage.setItem('ls.errors','broken json');localStorage.setItem('ls.theme','dark');});
   await page.reload();await page.waitForSelector('html[data-loading="false"]');
-  await page.focus('#search');
+  await page.setViewportSize({width:412,height:860});await page.focus('#search');
+  assert.match(await page.locator('.app-row').first().locator('.module-setting').textContent(),/日语（日本）/);
   if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'apps-dark-focused.png')});
   await page.click('[data-page=settings]');await page.click('#diagnosticsLink');
   await page.waitForFunction(()=>document.getElementById('operationStatus').textContent.includes('开机应用已关闭'));

@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const C=window.LSCore,P=window.LSPresentation;
-const WEBUI_VERSION="0.1.6";
+const WEBUI_VERSION="1.0.0";
 const DATA="/data/adb/language_selector_ksu_data";
 const CONFIG=DATA+"/config.v1";
 const $=id=>document.getElementById(id);

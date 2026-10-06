@@ -158,7 +158,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.click('[data-page=settings]');await page.click('#diagnosticsLink');
   await page.waitForFunction(()=>document.getElementById('operationStatus').textContent.includes('开机应用已关闭'));
   assert.match(await page.locator('#diagnostics').textContent(),/cmd locale可用/);
-  assert.match(await page.locator('#diagnostics').textContent(),/WebUI 版本0.1.6/);assert.match(await page.locator('#diagnostics').textContent(),/双线段动画已加载/);
+  assert.match(await page.locator('#diagnostics').textContent(),/WebUI 版本1.0.0/);assert.match(await page.locator('#diagnostics').textContent(),/双线段动画已加载/);
   await page.click('#rawLogs summary');await page.click('#wrapLogs');assert.equal(await page.getAttribute('#wrapLogs','aria-pressed'),'true');
   await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.click('#copyLogs');
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),await page.locator('#rawStatus').textContent());

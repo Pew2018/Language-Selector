@@ -51,7 +51,7 @@
     const state=history.state;
     if(dialog&&!state?.dialog){finishDialog();return;}
     // A answered dialog is never revived by browser Forward.
-    if(state?.dialog){history.replaceState({...state,dialog:undefined},'','#'+state.page);}
+    if(state?.dialog){history.back();return;}
     const page=state?.ls?state.page:location.hash.slice(1);
     if(page==='detail'&&!adapter?.detail(state?.packageName)){render('apps');return;}
     render(page,state?.scroll||0);

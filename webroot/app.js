@@ -169,7 +169,7 @@ const infoMap=new Map(all.map(x=>[x.packageName,x])),systemMap=new Map((shellEnt
  const result=userError?{ok:false,reason:"user-unavailable",raw:userError.message}:await readLocale(item.packageName,user);
  if(generation!==S.loadGeneration)return;
  if(item.readSerial===serial){item.locale=result;item.checking=false;updateLocaleRow(item)}
- i++;if(i%15===0||i===apps.length)setProgress(i,apps.length)await yieldTask()
+ i++;if(i%15===0||i===apps.length)setProgress(i,apps.length);await yieldTask()
 }}await Promise.all(Array.from({length:6},worker));if(generation===S.loadGeneration){S.localeFailures=apps.filter(x=>!x.locale?.ok).length;S.localeLoading=false;setProgress(false);showListSummary()}})().catch(e=>{if(generation!==S.loadGeneration)return;S.localeLoading=false;setProgress(false);$("listStatus").textContent="语言设置读取中断："+P.errorText(e);recordError(e.message)})}catch(e){setProgress(false);S.localeLoading=false;$("listStatus").textContent="无法加载应用："+P.errorText(e);S.errors.unshift(e.message);recordError("App list: "+e.message)}finally{S.loading=false;updateBusy()}}
 function syncProgressVisibility(){
  document.documentElement.dataset.progressPaused=String(document.hidden||S.page!=="apps");

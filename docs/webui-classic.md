@@ -33,3 +33,10 @@ With Playwright/Chromium installed, run `node tests/browser.cjs`. It uses a mock
 - Diagnostics summarize boot results in readable text; raw output remains in the expandable section. Locale-command availability checks both help entries regardless of their order.
 
 References: [Material Design text fields](https://m2.material.io/design/components/text-fields.html), [Material touch targets](https://m1.material.io/usability/accessibility.html). Assets and styling remain local; no runtime dependency is added.
+# 应用列表显示与加载（0.1.2）
+
+设置页提供独立的“显示应用图标”和“显示应用名称”开关，默认均开启。
+两者关闭时只显示和搜索包名；关闭名称时不再读取名称信息，系统应用分类由当前用户的 Package Manager 列表提供。
+关闭图标时不调用图标接口、不创建图片、不请求 `ksu://icon`；详情页遵循相同偏好。
+开启图标时，列表先显示，随后读取可见行附近的图标，每批最多 12 个；本次加载中的已读取图标复用。
+语言配置徽标和模块配置优先排序不受显示开关影响。显示偏好仅存 WebUI localStorage，不修改 Root 配置。

@@ -39,3 +39,4 @@ html[data-theme=dark] .search{background:rgba(255,255,255,.07)}
 .locale-state{font-size:12px;line-height:1.5;color:var(--secondary);margin-top:3px;overflow-wrap:anywhere}
 .module-configured{border-bottom:1px solid var(--divider)}
 .statusbox{font-size:13px;line-height:1.65}
+.app-icon:not([src]),.app-icon.icon-unavailable{background:var(--divider);border-radius:4px}

@@ -8,14 +8,14 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   browser=await chromium.launch({headless:true,args:['--no-sandbox']});
   const page=await browser.newPage({viewport:{width:412,height:860}}),errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.addInitScript(()=>{
-   window.mockCommands=[];window.mockLocale='';window.mockLocales={'com.example.music':'fr-FR','com.example.reader':'zh-CN'};window.mockConfig='schema=1\nauto=0\napp=com.example.reader|zh-Hans-CN\n';window.mockDelay=0;if(sessionStorage.getItem('mockConfig'))window.mockConfig=sessionStorage.getItem('mockConfig');if(sessionStorage.getItem('mockLocales'))window.mockLocales=JSON.parse(sessionStorage.getItem('mockLocales'));
+   window.mockCommands=[];window.mockInfoCalls=0;window.mockIconCalls=0;window.mockLocale='';window.mockLocales={'com.example.music':'fr-FR','com.example.reader':'zh-CN'};window.mockConfig='schema=1\nauto=0\napp=com.example.reader|zh-Hans-CN\n';window.mockDelay=0;if(sessionStorage.getItem('mockConfig'))window.mockConfig=sessionStorage.getItem('mockConfig');if(sessionStorage.getItem('mockLocales'))window.mockLocales=JSON.parse(sessionStorage.getItem('mockLocales'));
    const icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48"><rect width="48" height="48" fill="#42A5F5"/></svg>');
    function execute(cmd,options,cb){window.mockCommands.push(cmd);let out='',code=0,err='';const op=/control\.sh' '(\w+)' '([0-9]+)'(?: '([^']*)')?(?: '([^']*)')?/.exec(cmd);
     if(op){const [,action,user,pkg,tag]=op;if(!mockConfig.startsWith('schema=1')&&action!=='status'){code=1;err='Invalid configuration'}else if(action==='read')out=mockConfig;else if(action==='state')out=sessionStorage.getItem('mockPending')==='true'?'pending':'ready';else if(action==='status')out='summary=boot apply disabled\nsuccess=0\nfailed=0\n';else if(action==='locale'){mockLocale=tag==='@system'?'':tag;mockLocales[pkg]=mockLocale;mockConfig=mockConfig.split('\n').filter(l=>!l.startsWith('app='+pkg+'|')).join('\n').trimEnd()+'\napp='+pkg+'|'+tag+'\n';out=mockConfig}else if(action==='auto'){mockConfig=mockConfig.replace(/^auto=[01]$/m,'auto='+pkg);out=mockConfig}else if(action==='recover'){sessionStorage.setItem('mockPending','false');out=mockConfig}}
-    else if(cmd==='am get-current-user')out='0';else if(cmd==='getprop ro.build.version.sdk')out='36';else if(cmd.includes('cmd locale help'))out='available';else if(cmd.includes('list-device-locales'))out='en-US\nja-JP\nzh-Hans-CN\nzh-Hant-TW';else if(cmd.includes('get-app-locales')){const pkg=cmd.includes('com.example.music')?'com.example.music':'com.example.reader';out='Locales for '+pkg+' for user 0 are ['+(mockLocales[pkg]||'')+']'}else if(cmd.includes('getprop'))out='16\n36';
+    else if(cmd.includes('cmd package list packages'))out=cmd.includes(' -s')?'package:com.android.settings':cmd.includes(' -3')?'package:com.example.music\npackage:com.example.reader':'package:com.android.settings\npackage:com.example.music\npackage:com.example.reader';else if(cmd==='am get-current-user')out='0';else if(cmd==='getprop ro.build.version.sdk')out='36';else if(cmd.includes('cmd locale help'))out='available';else if(cmd.includes('list-device-locales'))out='en-US\nja-JP\nzh-Hans-CN\nzh-Hant-TW';else if(cmd.includes('get-app-locales')){const pkg=cmd.includes('com.example.music')?'com.example.music':'com.example.reader';out='Locales for '+pkg+' for user 0 are ['+(mockLocales[pkg]||'')+']'}else if(cmd.includes('getprop'))out='16\n36';
     sessionStorage.setItem('mockConfig',mockConfig);sessionStorage.setItem('mockLocales',JSON.stringify(mockLocales));setTimeout(()=>window[cb]?.(code,out,err),window.mockDelay||3);
    }
-   window.ksu={listPackages:()=>JSON.stringify(['com.example.music','com.example.reader','com.android.settings']),getPackagesInfo:names=>JSON.stringify(JSON.parse(names).map(packageName=>({packageName,appLabel:({'com.example.reader':'阅读器','com.example.music':'Music Player','com.android.settings':'系统设置'})[packageName],isSystem:packageName.startsWith('com.android.')}))),getPackagesIcons:names=>JSON.stringify(JSON.parse(names).map(packageName=>({packageName,icon}))),exec:execute,
+   window.ksu={listPackages:()=>JSON.stringify(['com.example.music','com.example.reader','com.android.settings']),getPackagesInfo:names=>(window.mockInfoCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,appLabel:({'com.example.reader':'阅读器','com.example.music':'Music Player','com.android.settings':'系统设置'})[packageName],isSystem:packageName.startsWith('com.android.')})))),getPackagesIcons:names=>(window.mockIconCalls++,JSON.stringify(JSON.parse(names).map(packageName=>({packageName,icon})))),exec:execute,
     spawn(command,args,options,name){const program=JSON.parse(args)[1],cmd=program.slice(1,-1).replaceAll(String.fromCharCode(39,34,39,34,39),String.fromCharCode(39)),callback=name+'_mock';const handler=window[name];window[callback]=(code,out,err)=>{if(out)handler.stdout.emit('data',out);if(err)handler.stderr.emit('data',err);handler.emit('exit',code);if(code)handler.emit('error',{message:err});delete window[callback]};execute(cmd,options,callback);}
    };
   });
@@ -70,6 +70,31 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.waitForTimeout(550);
   await page.evaluate(()=>{const b=document.getElementById('systemSwitch');b.dispatchEvent(new PointerEvent('pointerdown',{isPrimary:true,button:0,pointerId:5,clientX:10,clientY:10}));b.dispatchEvent(new PointerEvent('pointerup',{isPrimary:true,button:0,pointerId:5,clientX:10,clientY:10}));});assert.equal(await page.locator('.tap-ripple').count(),1);await page.waitForTimeout(550);assert.equal(await page.locator('.tap-ripple').count(),0);
   await page.emulateMedia({reducedMotion:'reduce'});await page.click('#systemSwitch');assert.equal(await page.locator('.tap-ripple').count(),0);
+  // Independent display switches persist, skip native work, preserve priority and detail behavior.
+  await page.click('[data-page=settings]');await page.click('#appIconsSwitch');
+  assert.equal(await page.getAttribute('#appIconsSwitch','aria-checked'),'false');
+  await page.click('#appNamesSwitch');assert.equal(await page.getAttribute('#appNamesSwitch','aria-checked'),'false');
+  for(const [icons,names]of [[false,false],[false,true],[true,false],[true,true]]){
+   await page.evaluate(({icons,names})=>{localStorage.setItem('language_selector.showAppIcons',String(icons));localStorage.setItem('language_selector.showAppNames',String(names));},{icons,names});
+   await page.reload();await page.waitForSelector('html[data-loading="false"]');await page.waitForSelector('.app-row');
+   await page.waitForFunction(()=>document.querySelector('.app-row')?.dataset.packageName==='com.example.reader');
+   assert.equal(await page.locator('.app-row .app-icon').count(),icons?2:0);
+   assert.equal(await page.locator('.app-row .package').count(),names?2:0);
+   assert.equal(await page.locator('.app-row').first().locator('.app-name').textContent(),names?'阅读器':'com.example.reader');
+   assert.match(await page.locator('.app-row').first().locator('.module-setting').textContent(),/已在模块中设置为/);
+   if(!names)assert.equal(await page.evaluate(()=>mockInfoCalls),0);
+   if(icons)await page.waitForFunction(()=>mockIconCalls>0);else assert.equal(await page.evaluate(()=>mockIconCalls),0);
+   await page.fill('#search','阅读器');assert.equal(await page.locator('.app-row').count(),names?1:0);
+   await page.click('#searchClear');await page.fill('#search','reader');assert.equal(await page.locator('.app-row').count(),1);await page.click('#searchClear');
+   await page.locator('[data-package-name="com.example.reader"]').click();await page.waitForSelector('#detailPage:not(.hidden)');
+   assert.equal(await page.locator('#appHeader .app-icon').count(),icons?1:0);
+   assert.equal(await page.locator('#appHeader .package').count(),names?1:0);
+   await page.click('#back');
+   if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'display-'+Number(icons)+'-'+Number(names)+'.png')});
+   await page.click('#refresh');await page.waitForFunction(()=>document.getElementById('listStatus').textContent.includes('个应用已加载'));
+   if(!icons)assert.equal(await page.evaluate(()=>mockIconCalls),0);
+   if(!names)assert.equal(await page.evaluate(()=>mockInfoCalls),0);
+  }
   // Reload must retain unfinished state; reconciliation performs no locale write.
   await page.evaluate(()=>sessionStorage.setItem('mockPending','true'));await page.reload();await page.waitForSelector('html[data-loading="false"]');
   assert.equal(await page.locator('.app-row').first().isDisabled(),true);
@@ -81,6 +106,9 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.locator('.app-row').first().click();await page.waitForSelector('#detailPage:not(.hidden)');
   assert.equal(await page.locator('#restoreDefault').isDisabled(),true);assert.equal(await page.locator('.locale-option').first().isDisabled(),true);
   assert.equal(await page.evaluate(()=>mockCommands.filter(c=>/control[.]sh' '(locale|auto|recover)'/.test(c)).length),0);
+  await page.click('#back');await page.click('[data-page=settings]');await page.click('#diagnosticsLink');
+  await page.waitForFunction(()=>document.getElementById('diagnostics').textContent.includes('无法确认'));
+  assert.match(await page.locator('#rawStatus').textContent(),/Config: Invalid configuration/);
   assert.deepEqual(errors,[]);console.log('Browser smoke passed: themes, colors, 4 widths, navigation, dialogs, safe mutations, ripple and reduced motion.');
  }finally{await browser?.close();await new Promise(resolve=>server.close(resolve));}
 })().catch(error=>{console.error(error);process.exitCode=1;});

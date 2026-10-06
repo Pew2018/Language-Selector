@@ -33,3 +33,8 @@ CI also runs security tests under BusyBox ash. This validates shell compatibilit
 Actions are pinned to verified upstream commit SHAs; npm ci uses the committed lockfile with integrity hashes and install scripts disabled. QA dependencies are excluded from the install module. The integrity artifact contains module-check.zip, its SHA-256 and the source commit. A checksum from the same build detects accidental corruption; it is not an independent digital signature or a guarantee against a compromised GitHub account/runner.
 
 References: [KernelSU module environment](https://kernelsu.org/guide/module.html), [Android native bridge security](https://developer.android.com/privacy-and-security/risks/insecure-webview-native-bridges), [GitHub secure Actions use](https://docs.github.com/en/actions/reference/security/secure-use).
+# Android Shell 文件锁兼容性（0.1.2）
+
+持锁进程保留描述符 9，调用 `flock -n 0 <&9` 时显式将同一打开文件描述传给标准输入，避免 mksh 将高位描述符设置为私有后外部 flock 无法继承。
+仅无错误输出的锁竞争会进行有限重试；工具报错立即停止，保留禁止写入行为。
+CI 同时运行 BusyBox ash 和 mksh 的隔离安全测试，涵盖并发合并、进程退出释放锁和不可恢复错误。

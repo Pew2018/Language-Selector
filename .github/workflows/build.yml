@@ -34,8 +34,9 @@ jobs:
       - name: Verify KernelSU BusyBox ash compatibility
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y busybox
+          sudo apt-get install -y busybox mksh
           sudo env LS_TEST_SHELL=/bin/busybox "$(command -v node)" --test tests/security.test.js
+          sudo env LS_TEST_SHELL=/bin/mksh "$(command -v node)" --test tests/security.test.js
       - name: Install browser QA dependencies
         run: |
           npm ci --ignore-scripts

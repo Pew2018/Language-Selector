@@ -31,10 +31,15 @@ init_storage() {
   if [ ! -e "$LOCK" ]; then (set -C; : > "$LOCK") 2>/dev/null || :; fi
   safe_file "$LOCK"
   exec 9<>"$LOCK" || fail "Cannot open state lock"
-  # flock -n is supported by Android toybox and KernelSU's BusyBox.
+  # mksh keeps exec-created high descriptors private. Explicitly duplicate the
+  # same open file description to stdin for flock; fd 9 retains the lock here.
   command -v flock >/dev/null 2>&1 || fail "File locking unavailable"
   n=0
-  until flock -n 9; do n=$((n + 1)); [ "$n" -lt 30 ] || fail "Another module operation is active"; sleep 0.1; done
+  until lock_error=$(flock -n 0 <&9 2>&1); do
+    [ -z "$lock_error" ] || fail "File locking failed: $lock_error"
+    n=$((n + 1)); [ "$n" -lt 30 ] || fail "Another module operation is active"
+    sleep 0.1
+  done
   WORK=$(mktemp -d "$DATA_DIR/.operation.XXXXXX") || fail "Cannot create operation workspace"
   trap 'rm -rf "$WORK"' EXIT
   trap 'exit 1' HUP INT TERM

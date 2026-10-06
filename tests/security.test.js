@@ -8,12 +8,20 @@ function fixture(){
  put('getprop','case "$1" in ro.build.version.sdk) echo 36;; sys.boot_completed) echo 1;; esac');
  put('cmd','printf "%s\\n" "$*" >> '+JSON.stringify(log)+'\ncase "$1 $2" in "locale help") echo "set-app-locales get-app-locales";; "locale set-app-locales") if [ "$6" = --locales ]; then printf "%s" "$7" > '+JSON.stringify(actual)+'; else : > '+JSON.stringify(actual)+'; fi;; "locale get-app-locales") echo "Locales for $3 for user $5 are [$(cat '+JSON.stringify(actual)+')]";; esac');
  const env={...process.env,LS_DATA_DIR:data,PATH:bin+':'+process.env.PATH};
- const shell=process.env.LS_TEST_SHELL||'sh',prefix=process.env.LS_TEST_SHELL?['sh']:[];
+ const shell=process.env.LS_TEST_SHELL||'sh',prefix=path.basename(shell)==='busybox'?['sh']:[];
  const run=(...args)=>spawnSync(shell,[...prefix,'control.sh',...args],{env,encoding:'utf8',timeout:15000});
  const cfg=path.join(data,'config.v1');fs.writeFileSync(cfg,'schema=1\nauto=0\napp=com.example.keep|fr-FR\n');
  return{root,data,bin,log,actual,user,cfg,put,env,run,shell,prefix,cleanup:()=>fs.rmSync(root,{recursive:true,force:true})};
 }
 test('corrupt configuration blocks writes without replacing original',()=>{const f=fixture();try{const bad='schema=99\nauto=1\n';fs.writeFileSync(f.cfg,bad);const r=f.run('locale','0','com.example.app','ja-JP');assert.notEqual(r.status,0);assert.equal(fs.existsSync(f.log),false);assert.equal(fs.readFileSync(f.cfg,'utf8'),bad)}finally{f.cleanup()}});
+test('flock receives an explicitly inherited descriptor and hard errors are not retried',()=>{const f=fixture();try{
+ const realFlock=spawnSync('sh',['-c','command -v flock'],{encoding:'utf8'}).stdout.trim();
+ f.put('flock','printf "%s\\n" "$*" >> '+JSON.stringify(f.log)+'\nexec '+JSON.stringify(realFlock)+' "$@"');
+ assert.equal(f.run('read','0').status,0);assert.equal(fs.readFileSync(f.log,'utf8').trim(),'-n 0');
+ fs.unlinkSync(f.log);f.put('flock','echo call >> '+JSON.stringify(f.log)+'\necho "flock: Bad file descriptor" >&2\nexit 1');
+ const r=f.run('read','0');assert.notEqual(r.status,0);assert.match(r.stderr,/File locking failed:.*Bad file descriptor/);
+ assert.equal(fs.readFileSync(f.log,'utf8').trim(),'call');
+}finally{f.cleanup()}});
 test('single-entry mutations preserve latest unrelated entries and isolate users',()=>{const f=fixture();try{
  assert.equal(f.run('locale','0','com.example.app','ja-JP').status,0);assert.match(fs.readFileSync(f.cfg,'utf8'),/com.example.keep\|fr-FR/);
  fs.writeFileSync(f.user,'10');const r=f.run('read','10');assert.equal(r.status,0);assert.doesNotMatch(r.stdout,/com.example.keep/);

@@ -100,12 +100,13 @@ async function restoreDefault(){
  const app=S.selected;if(!app||!app.locale?.ok||app.locale.followSystem)return;
  await mutation(()=>performLocale(app,null));
 }
-function showAction(text,error=false){
+function showAction(text,error=false,app=null){
+ if(app&&S.selected!==app)return;
  $("actionStatus").hidden=false;$("actionStatus").textContent=(error?"⚠ ":"")+text;$("actionStatus").dataset.error=String(error);
 }
 async function performLocale(app,tag){
  let submitted=false;app.readSerial=(app.readSerial||0)+1;
- showAction("正在保存并应用…");announce("正在应用…");
+ showAction("正在保存并应用…",false,app);announce("正在应用…");
  try{
   if(!S.configValid||uncertain)throw Error("配置不可用，已禁止修改");checkPlatform();
   if(await getUser()!==S.user)throw Error("Android 用户已切换，请刷新");
@@ -115,12 +116,12 @@ async function performLocale(app,tag){
   S.operation=matched?(tag===null?"已恢复跟随系统":"已生效："+langLabel(tag)):"配置已保存，当前设置尚未确认";
   storage.setItem("language_selector.operation."+S.user,S.operation+" · "+app.packageName);
   storage.setItem("language_selector.operationTime."+S.user,new Date().toISOString());
-  showAction(S.operation,!matched);announce(S.operation);S.lastAction={ok:!!matched,text:S.operation};
+  showAction(S.operation,!matched,app);announce(S.operation);S.lastAction={ok:!!matched,text:S.operation};
  }catch(e){
   recordError(e.message);S.lastAction={ok:false,text:P.errorText(e)};
   if(submitted){try{const state=(await backend("state")).trim();S.operationState=["ready","pending"].includes(state)?state:null;uncertain=state!=="ready"}catch(_){S.operationState=null;uncertain=true}}
   $("recoverOperation").hidden=S.operationState!=="pending";await refreshAppLocale(app);
-  showAction(P.errorText(e),true);announce(P.errorText(e));
+  showAction(P.errorText(e),true,app);announce(P.errorText(e));
   storage.setItem("language_selector.operation."+S.user,"未完成："+P.errorText(e)+" · "+app.packageName);
   storage.setItem("language_selector.operationTime."+S.user,new Date().toISOString());
  }finally{syncDetailState(app);updateBusy()}
@@ -187,7 +188,7 @@ function scheduleAppOrder(){
  const nodes=[];if(configuredHeading)nodes.push(configuredHeading);
  ordered.forEach((app,i)=>{if(i===count&&otherHeading)nodes.push(otherHeading);if(byPackage.has(app.packageName))nodes.push(byPackage.get(app.packageName))});
  if(nodes.every((node,i)=>host.children[i]===node))return;
- const scroll=$("main").scrollTop;nodes.forEach((node,i)=>{if(host.children[i]!==node)host.insertBefore(node,host.children[i]||null)});$("main").scrollTop=scroll;
+ const scroll=$("main").scrollTop,focus=document.activeElement;nodes.forEach((node,i)=>{if(host.children[i]!==node)host.insertBefore(node,host.children[i]||null)});if(focus?.isConnected&&document.activeElement!==focus)focus.focus({preventScroll:true});$("main").scrollTop=scroll;
  });
 }
 function decorateLocaleRow(row,app){

@@ -70,7 +70,7 @@ const {chromium}=require('playwright'),http=require('node:http'),fs=require('nod
   await page.click('#rawLogs summary');await page.click('#wrapLogs');assert.equal(await page.getAttribute('#wrapLogs','aria-pressed'),'true');
   await page.context().grantPermissions(['clipboard-read','clipboard-write']);await page.click('#copyLogs');
   assert.equal(await page.evaluate(()=>navigator.clipboard.readText()),await page.locator('#rawStatus').textContent());
-  await page.evaluate(()=>{window.mockBoot='started=2026-10-06T10:00:00+0800\\nfinished=2026-10-06T10:00:02+0800\\nsuccess=2\\nfailed=0\\nsummary=Invalid configuration: Android user changed; refresh before continuing\\n'});
+  await page.evaluate(()=>{window.mockBoot='started=2026-10-06T10:00:00+0800\nfinished=2026-10-06T10:00:02+0800\nsuccess=2\nfailed=0\nsummary=Invalid configuration: Android user changed; refresh before continuing\n'});
   await page.click('#diagnosticsRefresh');await page.waitForFunction(()=>document.getElementById('operationStatus').textContent.includes('开机应用已中断'));
   assert.match(await page.locator('#currentStatusTitle').textContent(),/当前可设置/);assert.match(await page.locator('#rawStatus').textContent(),/Android user changed/);
   if(process.env.LS_SCREENSHOT_DIR)await page.screenshot({path:path.join(process.env.LS_SCREENSHOT_DIR,'diagnostics-history.png')});

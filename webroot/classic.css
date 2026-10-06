@@ -142,3 +142,6 @@ html[data-progress-paused=true] .progress-bar,html[data-progress-paused=true] .b
 #restoreDefault:focus-visible{outline:2px solid var(--accent-ink);outline-offset:-2px}
 #restoreDefault:disabled{background:transparent;color:var(--disabled-ink);box-shadow:none}
 .follow-status{color:var(--secondary);font-size:12px;line-height:1.5;padding:8px}
+
+/* The load-region already supplies the 22px gap before the first group. */
+.app-list>.app-group-title:first-child{margin-top:0}

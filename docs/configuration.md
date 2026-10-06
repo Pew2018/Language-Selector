@@ -15,7 +15,6 @@ app=com.example.chat|@system
 - Package names are restricted to ASCII package identifier characters.
 - Locale values are validated BCP-47 tags; `@system` means follow the system default.
 - Unknown, malformed, and future schema data fails closed. The startup script never sources or evaluates the file.
-- JSON import/export uses schemaVersion 1 and contains only the auto-apply flag and package locale choices.
 - Save uses a temporary file, restrictive permissions, and atomic rename. The module installer does not remove this directory.
 
 ## WebUI requirements

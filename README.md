@@ -6,7 +6,7 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 
 - Installed packages through the Manager package API or an Android Package Manager shell fallback; labels and icons use Manager metadata APIs when available.
 - Search/filter, optional system-app display, actual locale reads, explicit locale set and restore-to-system-default.
-- Persistent per-package configuration, schemaVersion 1 JSON import/export by copy/paste, and explicit replace/merge choices.
+- Persistent per-package configuration for language choices and optional boot application.
 - Optional one-pass boot application after bounded service readiness checks.
 - Light/dark/system theme and classic Android system utility layout.
 - No tile, no external requests, no system partition writes, overlays, sepolicy rules, or SELinux changes.
@@ -16,7 +16,7 @@ An independent KernelSU Next module port for Android 13+ per-app languages. The 
 1. Download the Actions artifact ZIP and install it directly in KernelSU Next Manager. Its archive root contains `module.prop`; no inner module ZIP needs extracting.
 2. Open the module WebUI. The Manager must expose the asynchronous Root shell API. Package list, app info, and icon APIs are used when available; if package enumeration methods are missing, the module falls back to Android's package-manager shell command. Upstream documents these functions but does not publish an API-to-Manager-version mapping, so the required API set is stated rather than inventing a version number.
 3. Choose an app and set a language, or explicitly choose “Follow system default”. Confirm that operation results are verified by reading the actual locale again.
-4. Settings can export/import JSON in the WebView clipboard text area; import always shows a summary and asks for Replace or Merge before writing.
+4. In Settings, optionally enable one-pass boot application for saved language choices.
 
 The language list and interface are local. App labels/icons and root shell commands are provided by the installed KernelSU Next Manager, not a network service.
 

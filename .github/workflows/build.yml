@@ -19,6 +19,10 @@ jobs:
         run: |
           node --check webroot/core.js
           node --check webroot/app.js
+          node --check webroot/ui.js
+          node --check webroot/colors.js
+          node --check webroot/feedback.js
+          node --check webroot/startup.js
           node --test tests/*.test.js
       - name: Validate shell scripts and module metadata
         run: |
@@ -26,6 +30,20 @@ jobs:
           test -f module.prop
           grep -q '^id=language_selector_ksu$' module.prop
           test -f webroot/index.html
+      - name: Install browser QA dependencies
+        run: |
+          npm install --no-save --package-lock=false playwright@1.60.0
+          npx playwright install --with-deps chromium
+      - name: Browser UI regression and screenshots
+        env:
+          LS_SCREENSHOT_DIR: ui-qa
+        run: node tests/browser.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: language-selector-webui-qa
+          path: ui-qa/
+          if-no-files-found: ignore
       - name: Package KernelSU module
         run: |
           mkdir -p dist/module
